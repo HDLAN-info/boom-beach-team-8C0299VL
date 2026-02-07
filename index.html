@@ -90,6 +90,8 @@ html, body {
   font-weight: 600;
   color: #ffffff;
   line-height: 1;
+ white-space: nowrap;
+  overflow: hidden;
   margin-top: -7px;
   text-shadow:
     -2px -2px 0 #000,
@@ -284,7 +286,20 @@ fetch(url)
       });
     });
   }, 50);
+      setTimeout(autoShrinkNames, 100);
 });
+  function autoShrinkNames() {
+  document.querySelectorAll(".name").forEach(el => {
+    let size = 60; // původní font-size
+    el.style.fontSize = size + "px";
+
+    while (el.scrollWidth > el.clientWidth && size > 28) {
+      size--;
+      el.style.fontSize = size + "px";
+    }
+  });
+}
+  
 </script>
 
 </body>
