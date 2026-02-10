@@ -204,7 +204,15 @@ html, body {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+.account-name {
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
 
+.account-name:hover {
+  transform: scale(1.03);
+  filter: brightness(1.15);
+}
   
 </style>
 </head>
