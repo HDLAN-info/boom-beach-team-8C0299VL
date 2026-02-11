@@ -19,6 +19,310 @@ html, body {
   width: 2100px;
   font-family: "Trebuchet MS", Arial, sans-serif;
   background:
+    url("img/noise.png") repeat,
+    #f5edd1;
+}
+
+#team {
+  width: 2100px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.member {
+  background:
+    url("img/noise.png") repeat,
+    #e0d5b3;
+  border-radius: 16px;
+  padding: 2px 8px 2px 2px;
+  display: grid;
+  grid-template-columns: 124px 1fr 150px 180px;
+  align-items: center;
+  gap: 20px;
+  height: 162px;
+  box-shadow:
+    inset 0 2px 0 #fff5d8,
+    inset 0 -2px 0 rgba(0,0,0,0.10);
+}
+
+.level {
+  width: 110px;
+  height: 110px;
+  background:
+    url("img/noise.png") repeat,
+    #6fb6e5;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Broshk", sans-serif;
+  font-size: 70px;
+  font-weight: 700;
+  color: #fff;
+  border: 4px solid #2b5f8f;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0 4px 0 rgba(0,0,0,0.6);
+  box-shadow:
+    inset 0 6px 0 #a7d5f5,
+    0 3px 0 rgba(0,0,0,0.10);
+  margin-left: 14px;
+}
+
+.level.holiday {
+  background:
+    url("img/noise.png") repeat,
+    #7fdc8c;
+  border-color: #2f7a46;
+  box-shadow:
+    inset 0 6px 0 #bdf0c7,
+    0 3px 0 rgba(0,0,0,0.10);
+}
+
+.name {
+  font-size: 60px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1;
+ white-space: nowrap;
+  margin-top: -7px;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0 5px 0 rgba(0,0,0,0.6);
+}
+
+.role {
+  font-size: 40px;
+  font-weight: 600;
+  color: #2a2a2a;
+  margin-top: 6px;
+  text-shadow: 0 2px 0 rgba(0,0,0,0.10);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.session-icon {
+  width: 32px;
+  height: 32px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  opacity: 0;
+}
+
+.session-icon.active {
+  background-image: url("img/session.webp");
+  opacity: 1;
+}
+
+.qr, .qr-empty {
+  width: 150px;
+  height: 150px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.qr canvas {
+  width: 146px !important;
+  height: 146px !important;
+  image-rendering: pixelated;
+}
+
+.qr-logo {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  background: url("/img/boombeach-logo.png") center/contain no-repeat;
+  pointer-events: none;
+}
+
+.stats {
+  font-size: 40px;
+  font-weight: 600;
+  color: #111;
+}
+
+.stats div {
+  margin: 8px 0;
+}
+
+.icon {
+  width: 60px;
+  vertical-align: middle;
+  margin-right: 10px;
+}
+
+.intel {
+  transform: translateY(-5px);
+}
+
+.qr {
+  cursor: pointer;
+  text-decoration: none;
+}
+.account-popup {
+  position: fixed;
+  background:
+    url("img/noise.png") repeat,
+    #e0d5b3;
+  border-radius: 16px;
+  padding: 12px 24px;
+  box-shadow:
+    inset 0 2px 0 #fff5d8,
+    inset 0 -2px 0 rgba(0,0,0,0.10),
+    0 10px 30px rgba(0,0,0,0.25);
+  z-index: 9999;
+  font-size: 48px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: popupFade 0.15s ease-out;
+}
+
+@keyframes popupFade {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.account-name {
+  cursor: pointer;
+  transition: transform 0.08s ease, filter 0.08s ease;
+}
+
+.account-name:hover {
+  transform: scale(1.03);
+  filter: brightness(1.15);
+}
+  
+</style>
+</head>
+
+<body>
+
+<div id="team">Načítám…</div>
+
+<script>
+const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
+
+const medalIcon = "/img/medal.webp";
+const intelIcon = "/img/intel.webp";
+
+function clean(v) {
+  return (v || "").trim().replace(/^"+|"+$/g, "");
+}
+
+function parseCSVRow(row) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    if (char === '"') inQuotes = !inQuotes;
+    else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else current += char;
+  }
+  result.push(current);
+  return result;
+}
+
+function roleColor(role) {
+  const r = role.toLowerCase();
+  if (r === "leader") return "#ffcb20";
+  if (r === "co-leader") return "#d9fbb2";
+  if (r === "officer") return "#bbd7d8";
+  if (r === "member") return "#ffffff";
+  return "#ff5e5e";
+}
+
+function isTrue(v) {
+  return String(v).trim().toUpperCase() === "TRUE";
+}
+
+fetch(url)
+.then(r => r.text())
+.then(text => {
+  const rows = text.trim().split(/\r?\n/);
+  const header = parseCSVRow(rows[0]).map(h => clean(h).toLowerCase());
+  const idx = n => header.indexOf(n);
+
+  const players = rows.slice(1, 51).map(row => {
+    const c = parseCSVRow(row);
+    return {
+      name: clean(c[idx("name")]),
+      level: clean(c[idx("level")]),
+      role: clean(c[idx("role")]),
+      medals: clean(c[idx("vp")]),
+      tickets: clean(c[idx("intels")]),
+      qr: clean(c[idx("qr")]),
+      holiday: clean(c[idx("holiday")]),
+      session: clean(c[idx("session")]),
+      accounts: clean(c[idx("accounts")])
+    };
+  }).filter(p => p.name !== "");
+
+  players.sort((a, b) => Number(b.medals) - Number(a.medals));
+  const team = document.getElementById("team");
+  team.innerHTML = "";
+
+  players.forEach(p => {
+    const el = document.createElement("div");
+    el.className = "member";
+    const hasQR = p.qr !== "";
+
+    el.innerHTML = `
+      <div class="level ${isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
+      <div>
+        <div class="name account-name"
+     data-main="${p.name}"
+     data-accounts="${p.accounts}" style="color:${roleColor(p.role)}">${p.name}</div>
+        <div class="role">
+          <span class="session-icon ${isTrue(p.session) ? "active" : ""}"></span>
+          ${p.role}
+        </div>
+      </div>
+      ${hasQR ? `
+Řekl/a jsi:
+ctěl bych aby na tomto webu, byl přes ten qr kod zobrazen přiložený PNG soubor s nastaveným průhledným pozadím, místo toho ID. <!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=2100">
+<title>Boom Beach Team</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<style>
+@font-face {
+  font-family: "Broshk";
+  src: url("/fonts/broshk.ttf") format("truetype");
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 2100px;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  background:
     url("/img/noise.png") repeat,
     #f5edd1;
 }
@@ -140,11 +444,14 @@ html, body {
   image-rendering: pixelated;
 }
 
-.qr-logo {
+.qr-badge {
   position: absolute;
-  width: 56px;
-  height: 56px;
-  background: url("/img/boombeach-logo.png") center/contain no-repeat;
+  background: #000;
+  color: #fff;
+  font-weight: 900;
+  font-size: 18px;
+  padding: 6px 12px;
+  border-radius: 10px;
   pointer-events: none;
 }
 
@@ -249,7 +556,7 @@ fetch(url)
     el.className = "member";
     const hasQR = p.qr !== "";
 
-    el.innerHTML = `
+    el.innerHTML = 
       <div class="level ${isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
       <div>
         <div class="name" style="color:${roleColor(p.role)}">${p.name}</div>
@@ -258,10 +565,83 @@ fetch(url)
           ${p.role}
         </div>
       </div>
-      ${hasQR ? `
+      ${hasQR ? 
+        <a class="qr" href="${p.qr}" data-link="${p.qr}">
+          <div class="qr-badge">ID</div>
+        </a>
+       : <div class="qr-empty"></div>}
+      <div class="stats">
+        <div><img class="icon" src="${medalIcon}">${p.medals}</div>
+        <div><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
+      </div>
+    ;
+    team.appendChild(el);
+  });
+
+  setTimeout(() => {
+    document.querySelectorAll(".qr").forEach(el => {
+      new QRCode(el, {
+        text: el.dataset.link,
+        width: 146,
+        height: 146,
+        colorDark: "#000",
+        colorLight: "#e0d5b3",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    });
+  }, 50);
+      setTimeout(autoShrinkNames, 100);
+});
+  function autoShrinkNames() {
+  document.querySelectorAll(".name").forEach(el => {
+    let size = 60; // původní font-size
+    el.style.fontSize = size + "px";
+
+    while (el.scrollWidth > el.clientWidth && size > 28) {
+      size--;
+      el.style.fontSize = size + "px";
+    }
+  });
+}
+  
+</script>
+
+</body>
+</html>
+
+ChatGPT řekl:
+
+Chápu — chceš, aby uprostřed QR kódu nebyl text „ID“, ale tvé PNG logo s průhledným pozadím, které se vykreslí přes QR jako overlay.
+
+To jde 👍 QRCode.js sice neumí logo přímo, ale můžeme ho vložit absolutně přes canvas.
+✅ 1. Přidej logo do CSS
+
+Nahraď .qr-badge tímto:
+
+.qr-logo {
+  position: absolute;
+  width: 56px;
+  height: 56px;
+  background: url("/img/boombeach-logo.png") center/contain no-repeat;
+  pointer-events: none;
+}
+
+    cesta musí odpovídat umístění PNG na serveru
+
+✅ 2. Změň HTML generování QR
+
+Najdi tuto část:
+
+<a class="qr" href="${p.qr}" data-link="${p.qr}">
+  <div class="qr-badge">ID</div>
+</a>
+
+a změň na:
+
 <a class="qr" href="${p.qr}" data-link="${p.qr}">
   <div class="qr-logo"></div>
 </a>
+
       ` : `<div class="qr-empty"></div>`}
       <div class="stats">
         <div><img class="icon" src="${medalIcon}">${p.medals}</div>
@@ -295,8 +675,45 @@ fetch(url)
       el.style.fontSize = size + "px";
     }
   });
+  }
+  let popup = null;
+  function showAccounts(el) {
+  hidePopup();
+
+  const main = el.dataset.main;
+  const extra = el.dataset.accounts.trim();
+
+  if (!extra) return;
+
+  const list = [main, ...extra.split(", ").filter(a => a)];
+
+  popup = document.createElement("div");
+  popup.className = "account-popup";
+  popup.innerHTML = list.join("<br>");
+
+  document.body.appendChild(popup);
+
+  const rect = el.getBoundingClientRect();
+  popup.style.left = rect.left + "px";
+  popup.style.top = rect.bottom + 10 + "px";
 }
-  
+
+function hidePopup() {
+  if (popup) {
+    popup.remove();
+    popup = null;
+  }
+}
+
+document.addEventListener("click", e => {
+  const el = e.target.closest(".account-name");
+  if (el) showAccounts(el);
+  else hidePopup();
+});
+
+window.addEventListener("scroll", hidePopup);
+window.addEventListener("touchmove", hidePopup);
+ 
 </script>
 
 </body>
