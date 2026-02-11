@@ -6,11 +6,12 @@
 <title>Boom Beach Team</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
 @font-face {
   font-family: "Broshk";
-  src: url("fonts/broshk.ttf") format("truetype");
+  src: url("/fonts/broshk.ttf") format("truetype");
 }
 
 html, body {
@@ -18,9 +19,7 @@ html, body {
   padding: 0;
   width: 2100px;
   font-family: "Trebuchet MS", Arial, sans-serif;
-  background:
-    url("img/noise.png") repeat,
-    #f5edd1;
+  background: url("/img/noise.png") repeat, #f5edd1;
 }
 
 #team {
@@ -33,9 +32,7 @@ html, body {
 }
 
 .member {
-  background:
-    url("img/noise.png") repeat,
-    #e0d5b3;
+  background: url("/img/noise.png") repeat, #e0d5b3;
   border-radius: 16px;
   padding: 2px 8px 2px 2px;
   display: grid;
@@ -51,9 +48,7 @@ html, body {
 .level {
   width: 110px;
   height: 110px;
-  background:
-    url("img/noise.png") repeat,
-    #6fb6e5;
+  background: url("/img/noise.png") repeat, #6fb6e5;
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -76,21 +71,15 @@ html, body {
 }
 
 .level.holiday {
-  background:
-    url("img/noise.png") repeat,
-    #7fdc8c;
+  background: url("/img/noise.png") repeat, #7fdc8c;
   border-color: #2f7a46;
-  box-shadow:
-    inset 0 6px 0 #bdf0c7,
-    0 3px 0 rgba(0,0,0,0.10);
 }
 
 .name {
   font-size: 60px;
   font-weight: 600;
-  color: #ffffff;
   line-height: 1;
- white-space: nowrap;
+  white-space: nowrap;
   margin-top: -7px;
   text-shadow:
     -2px -2px 0 #000,
@@ -98,6 +87,7 @@ html, body {
     -2px  2px 0 #000,
      2px  2px 0 #000,
      0 5px 0 rgba(0,0,0,0.6);
+  cursor: pointer;
 }
 
 .role {
@@ -106,23 +96,6 @@ html, body {
   color: #2a2a2a;
   margin-top: 6px;
   text-shadow: 0 2px 0 rgba(0,0,0,0.10);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.session-icon {
-  width: 32px;
-  height: 32px;
-  background-repeat: no-repeat;
-  background-size: contain;
-  background-position: center;
-  opacity: 0;
-}
-
-.session-icon.active {
-  background-image: url("img/session.webp");
-  opacity: 1;
 }
 
 .qr, .qr-empty {
@@ -137,7 +110,6 @@ html, body {
 .qr canvas {
   width: 146px !important;
   height: 146px !important;
-  image-rendering: pixelated;
 }
 
 .qr-badge {
@@ -148,17 +120,11 @@ html, body {
   font-size: 18px;
   padding: 6px 12px;
   border-radius: 10px;
-  pointer-events: none;
 }
 
 .stats {
   font-size: 40px;
   font-weight: 600;
-  color: #111;
-}
-
-.stats div {
-  margin: 8px 0;
 }
 
 .icon {
@@ -167,53 +133,17 @@ html, body {
   margin-right: 10px;
 }
 
-.intel {
-  transform: translateY(-5px);
-}
-
-.qr {
-  cursor: pointer;
-  text-decoration: none;
-}
 .account-popup {
   position: fixed;
-  background:
-    url("img/noise.png") repeat,
-    #e0d5b3;
+  background: #e0d5b3;
   border-radius: 16px;
   padding: 12px 24px;
-  box-shadow:
-    inset 0 2px 0 #fff5d8,
-    inset 0 -2px 0 rgba(0,0,0,0.10),
-    0 10px 30px rgba(0,0,0,0.25);
-  z-index: 9999;
   font-size: 48px;
   font-weight: 600;
   color: #fff;
-  text-shadow:
-    -2px -2px 0 #000,
-     2px -2px 0 #000,
-    -2px  2px 0 #000,
-     2px  2px 0 #000;
-  white-space: nowrap;
-  pointer-events: none;
-  animation: popupFade 0.15s ease-out;
+  text-shadow: -2px -2px 0 #000;
+  z-index: 9999;
 }
-
-@keyframes popupFade {
-  from { transform: scale(0.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
-}
-.account-name {
-  cursor: pointer;
-  transition: transform 0.08s ease, filter 0.08s ease;
-}
-
-.account-name:hover {
-  transform: scale(1.03);
-  filter: brightness(1.15);
-}
-  
 </style>
 </head>
 
@@ -224,162 +154,85 @@ html, body {
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
 
-const medalIcon = "img/medal.webp";
-const intelIcon = "img/intel.webp";
+const medalIcon = "/img/medal.webp";
+const intelIcon = "/img/intel.webp";
 
 function clean(v) {
-  return (v || "").trim().replace(/^"+|"+$/g, "");
-}
-
-function parseCSVRow(row) {
-  const result = [];
-  let current = "";
-  let inQuotes = false;
-
-  for (let i = 0; i < row.length; i++) {
-    const char = row[i];
-    if (char === '"') inQuotes = !inQuotes;
-    else if (char === "," && !inQuotes) {
-      result.push(current);
-      current = "";
-    } else current += char;
-  }
-  result.push(current);
-  return result;
+  return (v || "").trim();
 }
 
 function roleColor(role) {
-  const r = role.toLowerCase();
-  if (r === "leader") return "#ffcb20";
-  if (r === "co-leader") return "#d9fbb2";
-  if (r === "officer") return "#bbd7d8";
-  if (r === "member") return "#ffffff";
-  return "#ff5e5e";
+  role = role.toLowerCase();
+  if (role === "leader") return "#ffcb20";
+  if (role === "co-leader") return "#d9fbb2";
+  if (role === "officer") return "#bbd7d8";
+  return "#fff";
 }
 
 function isTrue(v) {
-  return String(v).trim().toUpperCase() === "TRUE";
+  return String(v).toUpperCase() === "TRUE";
 }
 
-fetch(url)
-.then(r => r.text())
-.then(text => {
-  const rows = text.trim().split("\n");
-  const header = parseCSVRow(rows[0].replace(/^\uFEFF/, ""))
-  .map(h => clean(h).toLowerCase());
-  const idx = n => header.indexOf(n);
+Papa.parse(url, {
+  download: true,
+  header: true,
+  skipEmptyLines: true,
+  complete: function(results) {
 
-  const players = rows.slice(1, 51).map(row => {
-    const c = parseCSVRow(row);
-    return {
-      name: clean(c[idx("name")]),
-      level: clean(c[idx("level")]),
-      role: clean(c[idx("role")]),
-      medals: clean(c[idx("vp")]),
-      tickets: clean(c[idx("intels")]),
-      qr: clean(c[idx("qr")]),
-      holiday: clean(c[idx("holiday")]),
-      session: clean(c[idx("session")]),
-      accounts: clean(c[idx("accounts")])
-    };
-  }).filter(p => p.name !== "");
+    const players = results.data.map(row => ({
+      name: clean(row.name),
+      level: clean(row.level),
+      role: clean(row.role),
+      medals: clean(row.vp),
+      tickets: clean(row.intels),
+      qr: clean(row.qr),
+      holiday: clean(row.holiday),
+      accounts: clean(row.accounts)
+    })).filter(p => p.name);
 
-  players.sort((a, b) => Number(b.medals) - Number(a.medals));
-  const team = document.getElementById("team");
-  team.innerHTML = "";
+    players.sort((a,b)=>Number(b.medals)-Number(a.medals));
 
-  players.forEach(p => {
-    const el = document.createElement("div");
-    el.className = "member";
-    const hasQR = p.qr !== "";
+    const team = document.getElementById("team");
+    team.innerHTML = "";
 
-    el.innerHTML = `
-      <div class="level ${isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
-      <div>
-        <div class="name account-name"
-     data-main="${p.name}"
-     data-accounts="${p.accounts}" style="color:${roleColor(p.role)}">${p.name}</div>
-        <div class="role">
-          <span class="session-icon ${isTrue(p.session) ? "active" : ""}"></span>
-          ${p.role}
+    players.forEach(p=>{
+      const el = document.createElement("div");
+      el.className="member";
+
+      el.innerHTML=`
+        <div class="level ${isTrue(p.holiday)?"holiday":""}">${p.level}</div>
+        <div>
+          <div class="name" style="color:${roleColor(p.role)}">${p.name}</div>
+          <div class="role">${p.role}</div>
         </div>
-      </div>
-      ${hasQR ? `
-        <a class="qr" href="${p.qr}" data-link="${p.qr}">
-          <div class="qr-badge">ID</div>
-        </a>
-      ` : `<div class="qr-empty"></div>`}
-      <div class="stats">
-        <div><img class="icon" src="${medalIcon}">${p.medals}</div>
-        <div><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
-      </div>
-    `;
-    team.appendChild(el);
-  });
-
-  setTimeout(() => {
-    document.querySelectorAll(".qr").forEach(el => {
-      new QRCode(el, {
-        text: el.dataset.link,
-        width: 146,
-        height: 146,
-        colorDark: "#000",
-        colorLight: "#e0d5b3",
-        correctLevel: QRCode.CorrectLevel.H
-      });
+        ${p.qr?`<a class="qr" data-link="${p.qr}"><div class="qr-badge">ID</div></a>`:`<div class="qr-empty"></div>`}
+        <div class="stats">
+          <div><img class="icon" src="${medalIcon}">${p.medals}</div>
+          <div><img class="icon" src="${intelIcon}">${p.tickets}</div>
+        </div>
+      `;
+      team.appendChild(el);
     });
-  }, 50);
-      setTimeout(autoShrinkNames, 100);
-});
-  function autoShrinkNames() {
-  document.querySelectorAll(".name").forEach(el => {
-    let size = 60; // původní font-size
-    el.style.fontSize = size + "px";
 
-    while (el.scrollWidth > el.clientWidth && size > 28) {
+    setTimeout(()=>{
+      document.querySelectorAll(".qr").forEach(el=>{
+        new QRCode(el,{text:el.dataset.link,width:146,height:146});
+      });
+    },50);
+
+    autoShrinkNames();
+  }
+});
+
+function autoShrinkNames(){
+  document.querySelectorAll(".name").forEach(el=>{
+    let size=60;
+    while(el.scrollWidth>el.clientWidth && size>28){
       size--;
-      el.style.fontSize = size + "px";
+      el.style.fontSize=size+"px";
     }
   });
-  }
-  let popup = null;
-  function showAccounts(el) {
-  hidePopup();
-
-  const main = el.dataset.main;
-  const extra = el.dataset.accounts.trim();
-
-  if (!extra) return;
-
-  const list = [main, ...extra.split(", ").filter(a => a)];
-
-  popup = document.createElement("div");
-  popup.className = "account-popup";
-  popup.innerHTML = list.join("<br>");
-
-  document.body.appendChild(popup);
-
-  const rect = el.getBoundingClientRect();
-  popup.style.left = rect.left + "px";
-  popup.style.top = rect.bottom + 10 + "px";
 }
-
-function hidePopup() {
-  if (popup) {
-    popup.remove();
-    popup = null;
-  }
-}
-
-document.addEventListener("click", e => {
-  const el = e.target.closest(".account-name");
-  if (el) showAccounts(el);
-  else hidePopup();
-});
-
-window.addEventListener("scroll", hidePopup);
-window.addEventListener("touchmove", hidePopup);
- 
 </script>
 
 </body>
