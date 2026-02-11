@@ -6,12 +6,11 @@
 <title>Boom Beach Team</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
 <style>
 @font-face {
   font-family: "Broshk";
-  src: url("/fonts/broshk.ttf") format("truetype");
+  src: url("fonts/broshk.ttf") format("truetype");
 }
 
 html, body {
@@ -19,7 +18,9 @@ html, body {
   padding: 0;
   width: 2100px;
   font-family: "Trebuchet MS", Arial, sans-serif;
-  background: url("/img/noise.png") repeat, #f5edd1;
+  background:
+    url("img/noise.png") repeat,
+    #f5edd1;
 }
 
 #team {
@@ -32,7 +33,9 @@ html, body {
 }
 
 .member {
-  background: url("/img/noise.png") repeat, #e0d5b3;
+  background:
+    url("img/noise.png") repeat,
+    #e0d5b3;
   border-radius: 16px;
   padding: 2px 8px 2px 2px;
   display: grid;
@@ -48,7 +51,9 @@ html, body {
 .level {
   width: 110px;
   height: 110px;
-  background: url("/img/noise.png") repeat, #6fb6e5;
+  background:
+    url("img/noise.png") repeat,
+    #6fb6e5;
   border-radius: 50%;
   display: flex;
   justify-content: center;
@@ -71,15 +76,21 @@ html, body {
 }
 
 .level.holiday {
-  background: url("/img/noise.png") repeat, #7fdc8c;
+  background:
+    url("img/noise.png") repeat,
+    #7fdc8c;
   border-color: #2f7a46;
+  box-shadow:
+    inset 0 6px 0 #bdf0c7,
+    0 3px 0 rgba(0,0,0,0.10);
 }
 
 .name {
   font-size: 60px;
   font-weight: 600;
+  color: #ffffff;
   line-height: 1;
-  white-space: nowrap;
+ white-space: nowrap;
   margin-top: -7px;
   text-shadow:
     -2px -2px 0 #000,
@@ -87,7 +98,6 @@ html, body {
     -2px  2px 0 #000,
      2px  2px 0 #000,
      0 5px 0 rgba(0,0,0,0.6);
-  cursor: pointer;
 }
 
 .role {
@@ -96,6 +106,23 @@ html, body {
   color: #2a2a2a;
   margin-top: 6px;
   text-shadow: 0 2px 0 rgba(0,0,0,0.10);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.session-icon {
+  width: 32px;
+  height: 32px;
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center;
+  opacity: 0;
+}
+
+.session-icon.active {
+  background-image: url("img/session.webp");
+  opacity: 1;
 }
 
 .qr, .qr-empty {
@@ -110,6 +137,7 @@ html, body {
 .qr canvas {
   width: 146px !important;
   height: 146px !important;
+  image-rendering: pixelated;
 }
 
 .qr-badge {
@@ -120,11 +148,17 @@ html, body {
   font-size: 18px;
   padding: 6px 12px;
   border-radius: 10px;
+  pointer-events: none;
 }
 
 .stats {
   font-size: 40px;
   font-weight: 600;
+  color: #111;
+}
+
+.stats div {
+  margin: 8px 0;
 }
 
 .icon {
@@ -133,16 +167,13 @@ html, body {
   margin-right: 10px;
 }
 
-.account-popup {
-  position: fixed;
-  background: #e0d5b3;
-  border-radius: 16px;
-  padding: 12px 24px;
-  font-size: 48px;
-  font-weight: 600;
-  color: #fff;
-  text-shadow: -2px -2px 0 #000;
-  z-index: 9999;
+.intel {
+  transform: translateY(-5px);
+}
+
+.qr {
+  cursor: pointer;
+  text-decoration: none;
 }
 </style>
 </head>
@@ -154,85 +185,121 @@ html, body {
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
 
-const medalIcon = "/img/medal.webp";
-const intelIcon = "/img/intel.webp";
+const medalIcon = "img/medal.webp";
+const intelIcon = "img/intel.webp";
 
 function clean(v) {
-  return (v || "").trim();
+  return (v || "").trim().replace(/^"+|"+$/g, "");
+}
+
+function parseCSVRow(row) {
+  const result = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    if (char === '"') inQuotes = !inQuotes;
+    else if (char === "," && !inQuotes) {
+      result.push(current);
+      current = "";
+    } else current += char;
+  }
+  result.push(current);
+  return result;
 }
 
 function roleColor(role) {
-  role = role.toLowerCase();
-  if (role === "leader") return "#ffcb20";
-  if (role === "co-leader") return "#d9fbb2";
-  if (role === "officer") return "#bbd7d8";
-  return "#fff";
+  const r = role.toLowerCase();
+  if (r === "leader") return "#ffcb20";
+  if (r === "co-leader") return "#d9fbb2";
+  if (r === "officer") return "#bbd7d8";
+  if (r === "member") return "#ffffff";
+  return "#ff5e5e";
 }
 
 function isTrue(v) {
-  return String(v).toUpperCase() === "TRUE";
+  return String(v).trim().toUpperCase() === "TRUE";
 }
 
-Papa.parse(url, {
-  download: true,
-  header: true,
-  skipEmptyLines: true,
-  complete: function(results) {
+fetch(url)
+.then(r => r.text())
+.then(text => {
+  const rows = text.trim().split("\n");
+  const header = parseCSVRow(rows[0]).map(h => clean(h).toLowerCase());
+  const idx = n => header.indexOf(n);
 
-    const players = results.data.map(row => ({
-      name: clean(row.name),
-      level: clean(row.level),
-      role: clean(row.role),
-      medals: clean(row.vp),
-      tickets: clean(row.intels),
-      qr: clean(row.qr),
-      holiday: clean(row.holiday),
-      accounts: clean(row.accounts)
-    })).filter(p => p.name);
+  const players = rows.slice(1, 51).map(row => {
+    const c = parseCSVRow(row);
+    return {
+      name: clean(c[idx("name")]),
+      level: clean(c[idx("level")]),
+      role: clean(c[idx("role")]),
+      medals: clean(c[idx("vp")]),
+      tickets: clean(c[idx("intels")]),
+      qr: clean(c[idx("qr")]),
+      holiday: clean(c[idx("holiday")]),
+      session: clean(c[idx("session")])
+    };
+  }).filter(p => p.name !== "");
 
-    players.sort((a,b)=>Number(b.medals)-Number(a.medals));
+  players.sort((a, b) => Number(b.medals) - Number(a.medals));
+  const team = document.getElementById("team");
+  team.innerHTML = "";
 
-    const team = document.getElementById("team");
-    team.innerHTML = "";
+  players.forEach(p => {
+    const el = document.createElement("div");
+    el.className = "member";
+    const hasQR = p.qr !== "";
 
-    players.forEach(p=>{
-      const el = document.createElement("div");
-      el.className="member";
-
-      el.innerHTML=`
-        <div class="level ${isTrue(p.holiday)?"holiday":""}">${p.level}</div>
-        <div>
-          <div class="name" style="color:${roleColor(p.role)}">${p.name}</div>
-          <div class="role">${p.role}</div>
+    el.innerHTML = `
+      <div class="level ${isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
+      <div>
+        <div class="name" style="color:${roleColor(p.role)}">${p.name}</div>
+        <div class="role">
+          <span class="session-icon ${isTrue(p.session) ? "active" : ""}"></span>
+          ${p.role}
         </div>
-        ${p.qr?`<a class="qr" data-link="${p.qr}"><div class="qr-badge">ID</div></a>`:`<div class="qr-empty"></div>`}
-        <div class="stats">
-          <div><img class="icon" src="${medalIcon}">${p.medals}</div>
-          <div><img class="icon" src="${intelIcon}">${p.tickets}</div>
-        </div>
-      `;
-      team.appendChild(el);
-    });
+      </div>
+      ${hasQR ? `
+        <a class="qr" href="${p.qr}" data-link="${p.qr}">
+          <div class="qr-badge">ID</div>
+        </a>
+      ` : `<div class="qr-empty"></div>`}
+      <div class="stats">
+        <div><img class="icon" src="${medalIcon}">${p.medals}</div>
+        <div><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
+      </div>
+    `;
+    team.appendChild(el);
+  });
 
-    setTimeout(()=>{
-      document.querySelectorAll(".qr").forEach(el=>{
-        new QRCode(el,{text:el.dataset.link,width:146,height:146});
+  setTimeout(() => {
+    document.querySelectorAll(".qr").forEach(el => {
+      new QRCode(el, {
+        text: el.dataset.link,
+        width: 146,
+        height: 146,
+        colorDark: "#000",
+        colorLight: "#e0d5b3",
+        correctLevel: QRCode.CorrectLevel.H
       });
-    },50);
-
-    autoShrinkNames();
-  }
+    });
+  }, 50);
+      setTimeout(autoShrinkNames, 100);
 });
+  function autoShrinkNames() {
+  document.querySelectorAll(".name").forEach(el => {
+    let size = 60; // původní font-size
+    el.style.fontSize = size + "px";
 
-function autoShrinkNames(){
-  document.querySelectorAll(".name").forEach(el=>{
-    let size=60;
-    while(el.scrollWidth>el.clientWidth && size>28){
+    while (el.scrollWidth > el.clientWidth && size > 28) {
       size--;
-      el.style.fontSize=size+"px";
+      el.style.fontSize = size + "px";
     }
   });
 }
+  
 </script>
 
 </body>
