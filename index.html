@@ -6,6 +6,7 @@
 <title>Boom Beach Team</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 
 <style>
 @font-face {
@@ -218,6 +219,15 @@ html, body {
   from { transform: scale(0.95); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
+
+.stat-history { cursor: pointer; border-radius: 12px; transition: background-color .15s ease, transform .15s ease; user-select: none; }
+.stat-history:hover, .stat-history:focus-visible { background: rgba(255,255,255,.35); transform: scale(1.03); outline: none; }
+.history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #e0d5b3; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
+.history-popup.visible { display: block; }
+.history-title { margin: 0 45px 12px 0; font-size: 30px; line-height: 1.15; color: #1c2730; }
+.history-close { position: absolute; top: 10px; right: 14px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); font-size: 32px; line-height: 40px; cursor: pointer; }
+.history-chart-wrap { height: 405px; }
+.history-message { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 25px; color: #333; text-align: center; }
 </style>
   
 </head>
@@ -225,9 +235,16 @@ html, body {
 <body>
 
 <div id="team">Načítám…</div>
+<div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
+  <button class="history-close" type="button" aria-label="Zavřít">&times;</button>
+  <h2 id="historyTitle" class="history-title"></h2>
+  <div class="history-chart-wrap"><canvas></canvas></div>
+</div>
 
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
+
+const historyUrls = { intel: url + "&gid=1591390740", vp: url + "&gid=890280555" };
 
 const medalIcon = "img/medal.webp";
 const intelIcon = "img/intel.webp";
@@ -277,6 +294,7 @@ fetch(url)
     const c = parseCSVRow(row);
     return {
       name: clean(c[idx("name")]),
+      tag: clean(c[idx("tag")]),
       level: clean(c[idx("level")]),
       role: clean(c[idx("role")]),
       medals: clean(c[idx("vp")]),
@@ -314,8 +332,8 @@ fetch(url)
 </a>
       ` : `<div class="qr-empty"></div>`}
       <div class="stats">
-        <div><img class="icon" src="${medalIcon}">${p.medals}</div>
-        <div><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
+        <div class="stat-history" tabindex="0" role="button" data-kind="vp" data-tag="${p.tag}" data-player="${p.name}"><img class="icon" src="${medalIcon}">${p.medals}</div>
+        <div class="stat-history" tabindex="0" role="button" data-kind="intel" data-tag="${p.tag}" data-player="${p.name}"><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
       </div>
     `;
     team.appendChild(el);
@@ -391,7 +409,60 @@ document.addEventListener("click", e => {
 window.addEventListener("scroll", hidePopup);
 window.addEventListener("touchmove", hidePopup);
 
-</script>
+
+const historyPopup = document.getElementById("historyPopup");
+const historyTitle = document.getElementById("historyTitle");
+const historyCache = {};
+let historyChart = null, historyCloseTimer = null, historyPinned = false;
+
+function parseHistory(text) {
+  const rows = text.trim().split(/\r?\n/).map(parseCSVRow);
+  const labels = rows[0].slice(2).map(clean), byTag = new Map();
+  rows.slice(1).forEach(c => {
+    const recentValues = c.slice(2).map(raw => ({ raw: clean(raw), value: Number(clean(raw)) })).filter(p => p.raw !== "" && Number.isFinite(p.value)).slice(-30);
+    const points = recentValues.map((point, i) => ({ ...point, label: i === recentValues.length - 1 ? "Dnes" : `${recentValues.length - 1 - i} d. zpět` }));
+    byTag.set(clean(c[1]).toUpperCase(), points);
+  });
+  return byTag;
+}
+
+async function loadHistory(kind) {
+  if (!historyCache[kind]) historyCache[kind] = fetch(historyUrls[kind]).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }).then(parseHistory).catch(error => { delete historyCache[kind]; throw error; });
+  return historyCache[kind];
+}
+
+function positionHistoryPopup(anchor) {
+  const rect = anchor.getBoundingClientRect(), width = Math.min(820, window.innerWidth - 48), height = 500;
+  let left = rect.right + 18;
+  if (left + width > window.innerWidth - 24) left = rect.left - width - 18;
+  historyPopup.style.left = `${Math.max(24, Math.min(left, window.innerWidth - width - 24))}px`;
+  historyPopup.style.top = `${Math.max(24, Math.min(rect.top - 160, window.innerHeight - height - 24))}px`;
+}
+
+async function showHistory(anchor, pin = false) {
+  clearTimeout(historyCloseTimer); historyPinned = pin; historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
+  const kind = anchor.dataset.kind, wrap = historyPopup.querySelector(".history-chart-wrap");
+  historyTitle.textContent = `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
+  wrap.innerHTML = '<div class="history-message">Načítám historii…</div>';
+  try {
+    const points = (await loadHistory(kind)).get(anchor.dataset.tag.toUpperCase()) || [];
+    if (!points.length) { wrap.innerHTML = '<div class="history-message">Pro tohoto hráče zatím není historie k dispozici.</div>'; return; }
+    wrap.innerHTML = '<canvas></canvas>';
+    if (historyChart) historyChart.destroy();
+    historyChart = new Chart(wrap.querySelector("canvas"), { type: "line", data: { labels: points.map(p => p.label), datasets: [{ data: points.map(p => p.value), borderColor: kind === "vp" ? "#d59b00" : "#1687c4", backgroundColor: kind === "vp" ? "rgba(213,155,0,.18)" : "rgba(22,135,196,.18)", fill: true, tension: .25, pointRadius: points.length < 40 ? 4 : 0, pointHoverRadius: 7, borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: "index" }, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 16 }, maxTicksLimit: 10 } }, y: { ticks: { font: { size: 16 }, precision: 0 } } } } });
+  } catch (error) { wrap.innerHTML = '<div class="history-message">Historii se nepodařilo načíst. Zkuste to prosím znovu.</div>'; console.error(error); }
+}
+
+function closeHistory(force = false) { if (historyPinned && !force) return; historyPopup.classList.remove("visible"); historyPinned = false; }
+function scheduleHistoryClose() { clearTimeout(historyCloseTimer); historyCloseTimer = setTimeout(closeHistory, 250); }
+document.addEventListener("mouseover", e => { const stat = e.target.closest(".stat-history"); if (stat && !stat.contains(e.relatedTarget) && matchMedia("(hover: hover)").matches) showHistory(stat); });
+document.addEventListener("mouseout", e => { const stat = e.target.closest(".stat-history"); if (stat && !stat.contains(e.relatedTarget)) scheduleHistoryClose(); });
+document.addEventListener("click", e => { const stat = e.target.closest(".stat-history"); if (stat) { e.stopPropagation(); showHistory(stat, true); } else if (!e.target.closest(".history-popup")) closeHistory(true); });
+document.addEventListener("keydown", e => { const stat = e.target.closest(".stat-history"); if (stat && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showHistory(stat, true); } if (e.key === "Escape") closeHistory(true); });
+historyPopup.addEventListener("mouseenter", () => clearTimeout(historyCloseTimer));
+historyPopup.addEventListener("mouseleave", scheduleHistoryClose);
+historyPopup.querySelector(".history-close").addEventListener("click", () => closeHistory(true));
+window.addEventListener("resize", () => closeHistory(true));</script>
 
 </body>
 </html>
