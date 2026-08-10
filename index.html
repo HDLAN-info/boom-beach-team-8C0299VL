@@ -429,13 +429,42 @@ const historyPopup = document.getElementById("historyPopup");
 const historyTitle = document.getElementById("historyTitle");
 const historyCache = {};
 let historyChart = null, historyCloseTimer = null, historyPinned = false;
+const weekendBackgroundPlugin = {
+  id: "weekendBackground",
+  beforeDraw(chart, args, options) {
+    const { ctx, chartArea, scales } = chart;
+    if (!chartArea || !scales.x || !options.days) return;
+
+    ctx.save();
+    options.days.forEach((day, i) => {
+      if (day !== 0 && day !== 6) return;
+      const right = Math.min(chartArea.right, scales.x.getPixelForValue(i));
+      const left = i > 0
+        ? Math.max(chartArea.left, scales.x.getPixelForValue(i - 1))
+        : chartArea.left;
+      ctx.fillStyle = day === 6 ? "rgba(255, 214, 64, 0.18)" : "rgba(235, 80, 80, 0.14)";
+      ctx.fillRect(left, chartArea.top, right - left, chartArea.bottom - chartArea.top);
+    });
+    ctx.restore();
+  }
+};
 
 function parseHistory(text) {
   const rows = text.trim().split(/\r?\n/).map(parseCSVRow);
   const labels = rows[0].slice(2).map(clean), byTag = new Map();
   rows.slice(1).forEach(c => {
     const recentValues = c.slice(2).map(raw => ({ raw: clean(raw), value: Number(clean(raw)) })).filter(p => p.raw !== "" && Number.isFinite(p.value)).slice(-30);
-    const points = recentValues.map((point, i) => ({ ...point, label: i === recentValues.length - 1 ? "Včera" : `${recentValues.length - i} d.` }));
+    const points = recentValues.map((point, i) => {
+      const daysAgo = recentValues.length - i;
+      const date = new Date();
+      date.setHours(12, 0, 0, 0);
+      date.setDate(date.getDate() - daysAgo);
+      return {
+        ...point,
+        label: daysAgo === 1 ? "Včera" : `${daysAgo} d.`,
+        dayOfWeek: date.getDay()
+      };
+    });
     byTag.set(clean(c[1]).toUpperCase(), points);
   });
   return byTag;
@@ -464,7 +493,36 @@ async function showHistory(anchor, pin = false) {
     if (!points.length) { wrap.innerHTML = '<div class="history-message">Pro tohoto hráče zatím není historie k dispozici.</div>'; return; }
     wrap.innerHTML = '<canvas></canvas>';
     if (historyChart) historyChart.destroy();
-    historyChart = new Chart(wrap.querySelector("canvas"), { type: "line", data: { labels: points.map(p => p.label), datasets: [{ data: points.map(p => p.value), borderColor: kind === "vp" ? "#d59b00" : "#1687c4", backgroundColor: kind === "vp" ? "rgba(213,155,0,.18)" : "rgba(22,135,196,.18)", fill: true, tension: .25, pointRadius: points.length < 40 ? 4 : 0, pointHoverRadius: 7, borderWidth: 4 }] }, options: { responsive: true, maintainAspectRatio: false, interaction: { intersect: false, mode: "index" }, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 16 }, maxTicksLimit: 10 } }, y: { ticks: { font: { size: 16 }, precision: 0 } } } } });
+    historyChart = new Chart(wrap.querySelector("canvas"), {
+      type: "line",
+      plugins: [weekendBackgroundPlugin],
+      data: {
+        labels: points.map(p => p.label),
+        datasets: [{
+          data: points.map(p => p.value),
+          borderColor: kind === "vp" ? "#d59b00" : "#1687c4",
+          backgroundColor: kind === "vp" ? "rgba(213,155,0,.18)" : "rgba(22,135,196,.18)",
+          fill: true,
+          tension: .25,
+          pointRadius: points.length < 40 ? 4 : 0,
+          pointHoverRadius: 7,
+          borderWidth: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: "index" },
+        plugins: {
+          legend: { display: false },
+          weekendBackground: { days: points.map(p => p.dayOfWeek) }
+        },
+        scales: {
+          x: { ticks: { font: { size: 16 }, maxTicksLimit: 10 } },
+          y: { ticks: { font: { size: 16 }, precision: 0 } }
+        }
+      }
+    });
   } catch (error) { wrap.innerHTML = '<div class="history-message">Historii se nepodařilo načíst. Zkuste to prosím znovu.</div>'; console.error(error); }
 }
 
