@@ -336,7 +336,7 @@ const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS
 const historyUrls = {
   intel: url + "&gid=1591390740",
   vp: url + "&gid=890280555",
-  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=G:H"
+  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=A:H"
 };
 const teamInfoUrl = url + "&gid=861518513";
 const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
@@ -630,11 +630,10 @@ function parseCzechDate(value) {
 
 function parseTeamIntelHistory(text) {
   const chartClock = new Date();
-  chartClock.setMinutes(chartClock.getMinutes() - 105);
   chartClock.setHours(12, 0, 0, 0);
   return text.trim().split(/\r?\n/).slice(1).map(parseCSVRow).map(columns => {
-    const date = parseCzechDate(columns[0]);
-    const raw = clean(columns[1]);
+    const date = parseCzechDate(columns[1]);
+    const raw = clean(columns[7]);
     const value = Number(raw);
     if (!date || raw === "" || !Number.isFinite(value)) return null;
     const daysAgo = Math.round((chartClock - date) / 86400000);
