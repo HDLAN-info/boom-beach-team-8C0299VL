@@ -407,7 +407,7 @@ fetch(teamInfoUrl)
     });
   })
   .catch(error => console.error("Team info load failed", error));
-fetch(lastUpdateUrl)
+const lastUpdatePromise = fetch(lastUpdateUrl)
   .then(response => {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return response.text();
@@ -415,8 +415,12 @@ fetch(lastUpdateUrl)
   .then(text => {
     const value = clean(parseCSVRow(text.trim())[0]);
     if (value) document.getElementById("lastUpdateValue").textContent = value.replace(/(\d{1,2}:\d{2}):\d{2}\b/, "$1");
+    return parseCzechDateTime(value);
   })
-  .catch(error => console.error("Last update load failed", error));
+  .catch(error => {
+    console.error("Last update load failed", error);
+    return null;
+  });
 function roleColor(role) {
   const r = role.toLowerCase();
   if (r === "leader") return "#ffcb20";
@@ -598,13 +602,20 @@ const weekendBackgroundPlugin = {
   }
 };
 
-function parseHistory(text) {
+function parseCzechDateTime(value) {
+  const match = clean(value).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return null;
+  const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4]), Number(match[5]), Number(match[6] || 0));
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseHistory(text, lastUpdateDate) {
   const rows = text.trim().split(/\r?\n/).map(parseCSVRow);
   const labels = rows[0].slice(2).map(clean), byTag = new Map();
   rows.slice(1).forEach(c => {
     const recentValues = c.slice(2).map(raw => ({ raw: clean(raw), value: Number(clean(raw)) })).filter(p => p.raw !== "" && Number.isFinite(p.value)).slice(-30);
-    const chartClock = new Date();
-    chartClock.setMinutes(chartClock.getMinutes() - 105);
+    const chartClock = lastUpdateDate ? new Date(lastUpdateDate) : new Date();
+    if (!lastUpdateDate) chartClock.setMinutes(chartClock.getMinutes() - 105);
     chartClock.setHours(12, 0, 0, 0);
     const points = recentValues.map((point, i) => {
       const daysAgo = recentValues.length - i;
@@ -646,7 +657,16 @@ function parseTeamIntelHistory(text) {
   }).filter(Boolean).slice(-30);
 }
 async function loadHistory(kind) {
-  if (!historyCache[kind]) historyCache[kind] = fetch(historyUrls[kind]).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }).then(kind === "team_intel" ? parseTeamIntelHistory : parseHistory).catch(error => { delete historyCache[kind]; throw error; });
+  if (!historyCache[kind]) {
+    const historyTextPromise = fetch(historyUrls[kind]).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    });
+    historyCache[kind] = (kind === "team_intel"
+      ? historyTextPromise.then(parseTeamIntelHistory)
+      : Promise.all([historyTextPromise, lastUpdatePromise]).then(([text, lastUpdateDate]) => parseHistory(text, lastUpdateDate))
+    ).catch(error => { delete historyCache[kind]; throw error; });
+  }
   return historyCache[kind];
 }
 
