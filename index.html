@@ -26,7 +26,7 @@ html, body {
 
 #team {
   width: 2100px;
-  padding: 16px;
+  padding: 0 16px 16px;
   box-sizing: border-box;
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -232,12 +232,74 @@ html, body {
 .history-close { position: absolute; top: 10px; right: 14px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); font-size: 32px; line-height: 40px; cursor: pointer; }
 .history-chart-wrap { height: 405px; }
 .history-message { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 25px; color: #333; text-align: center; }
+
+.team-header {
+  position: relative;
+  width: 2100px;
+  margin: 0;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.team-header-image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.team-info-value {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  box-sizing: border-box;
+  padding: 0 3px;
+  background: transparent;
+  color: #2b2b31;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(255,255,255,.3);
+}
+
+
+.team-join-link {
+  position: absolute;
+  left: 85.9%;
+  top: 24.7%;
+  width: 12.8%;
+  height: 14.6%;
+  display: block;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.team-join-link:focus-visible {
+  outline: 4px solid #fff;
+  outline-offset: -5px;
+}
+.team-info-force { left: calc(78.55% + 2px); top: 26.3%; width: 5.70%; height: 6.7%; }
+.team-info-intels { left: calc(80.00% + 2px); top: 38.0%; width: 4.25%; height: 6.7%; }
+.team-info-members { left: 78.80%; top: calc(61.2% + 1px); width: 2.35%; height: 6.7%; font-size: 34px; font-weight: 700; padding: 0; }
+.team-info-entry { left: calc(81.00% + 2px); top: 72.9%; width: 3.25%; height: 6.7%; }
+.team-info-type { left: calc(78.80% + 2px); top: 84.3%; width: 5.45%; height: 6.7%; }
 </style>
   
 </head>
 
 <body>
 
+<div class="team-header" aria-label="Informace o týmu">
+  <img class="team-header-image" src="img/team-header.png" alt="CZECH task force">
+  <a class="team-join-link" href="https://link.boombeach.com/?url=boombeach%3A%2F%2FViewTaskforce%3Ftag%3D%23PV9LJUQ2" aria-label="Join CZECH task force"></a>
+  <span class="team-info-value team-info-force" data-team-info="force_points">41 743</span>
+  <span class="team-info-value team-info-intels" data-team-info="intels_per_day">1 935</span>
+  <span class="team-info-value team-info-members" data-team-info="members">50</span>
+  <span class="team-info-value team-info-entry" data-team-info="entry_requirement">1 200</span>
+  <span class="team-info-value team-info-type" data-team-info="type">Closed</span>
+</div>
 <div id="team">Načítám…</div>
 <div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
   <button class="history-close" type="button" aria-label="Zavřít">&times;</button>
@@ -249,6 +311,7 @@ html, body {
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
 
 const historyUrls = { intel: url + "&gid=1591390740", vp: url + "&gid=890280555" };
+const teamInfoUrl = url + "&gid=861518513";
 
 const medalIcon = "img/medal.webp";
 const intelIcon = "img/intel.webp";
@@ -274,6 +337,47 @@ function parseCSVRow(row) {
   return result;
 }
 
+
+function normalizeTeamInfoKey(value) {
+  return clean(value).toLowerCase().replace(/[^a-z]/g, "");
+}
+
+function formatTeamNumber(value) {
+  const number = Number(String(value).replace(/\s/g, ""));
+  return Number.isFinite(number) ? new Intl.NumberFormat("cs-CZ").format(number) : value;
+}
+
+fetch(teamInfoUrl)
+  .then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  })
+  .then(text => {
+    const values = new Map(
+      text.trim().split(/\r?\n/).map(row => {
+        const columns = parseCSVRow(row);
+        return [normalizeTeamInfoKey(columns[0]), clean(columns[1])];
+      })
+    );
+
+    const mappings = {
+      force_points: ["forcepoints", true],
+      intels_per_day: ["intelsperday", true],
+      members: ["members", false],
+      entry_requirement: ["entryregurement", true],
+      type: ["type", false]
+    };
+
+    Object.entries(mappings).forEach(([target, [source, numeric]]) => {
+      const value = values.get(source);
+      const element = document.querySelector(`[data-team-info="${target}"]`);
+      if (element && value !== undefined && value !== "") {
+        const displayValue = target === "members" ? value.split("/")[0] : value;
+        element.textContent = numeric ? formatTeamNumber(displayValue) : displayValue;
+      }
+    });
+  })
+  .catch(error => console.error("Team info load failed", error));
 function roleColor(role) {
   const r = role.toLowerCase();
   if (r === "leader") return "#ffcb20";
