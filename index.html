@@ -285,6 +285,22 @@ html, body {
 .team-info-members { left: 78.80%; top: calc(61.2% + 1px); width: 2.35%; height: 6.7%; font-size: 34px; font-weight: 900; padding: 0; }
 .team-info-entry { left: calc(81.00% + 9px); top: 72.9%; width: 3.25%; height: 6.7%; }
 .team-info-type { left: calc(78.80% + 9px); top: 84.3%; width: 5.45%; height: 6.7%; }
+.last-update {
+  width: 2100px;
+  box-sizing: border-box;
+  padding: 4px 20px 24px;
+  text-align: center;
+  color: #fff;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0 5px 0 rgba(0,0,0,0.6);
+}
 </style>
   
 </head>
@@ -301,6 +317,7 @@ html, body {
   <span class="team-info-value team-info-type" data-team-info="type">Closed</span>
 </div>
 <div id="team">Načítám…</div>
+<div class="last-update">Last update: <span id="lastUpdateValue"></span></div>
 <div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
   <button class="history-close" type="button" aria-label="Zavřít">&times;</button>
   <h2 id="historyTitle" class="history-title"></h2>
@@ -312,6 +329,7 @@ const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS
 
 const historyUrls = { intel: url + "&gid=1591390740", vp: url + "&gid=890280555" };
 const teamInfoUrl = url + "&gid=861518513";
+const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
 
 const medalIcon = "img/medal.webp";
 const intelIcon = "img/intel.webp";
@@ -378,6 +396,16 @@ fetch(teamInfoUrl)
     });
   })
   .catch(error => console.error("Team info load failed", error));
+fetch(lastUpdateUrl)
+  .then(response => {
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.text();
+  })
+  .then(text => {
+    const value = clean(parseCSVRow(text.trim())[0]);
+    if (value) document.getElementById("lastUpdateValue").textContent = value.replace(/(\d{1,2}:\d{2}):\d{2}\b/, "$1");
+  })
+  .catch(error => console.error("Last update load failed", error));
 function roleColor(role) {
   const r = role.toLowerCase();
   if (r === "leader") return "#ffcb20";
