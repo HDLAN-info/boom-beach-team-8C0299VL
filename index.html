@@ -297,7 +297,7 @@ html, body {
   <span class="team-info-value team-info-force" data-team-info="force_points">41 743</span>
   <span class="team-info-value team-info-intels" data-team-info="intels_per_day">1 935</span>
   <span class="team-info-value team-info-members" data-team-info="members">50</span>
-  <span class="team-info-value team-info-entry" data-team-info="entry_requirement">1 200</span>
+  <span class="team-info-value team-info-entry" data-team-info="entry_requirement">1200</span>
   <span class="team-info-value team-info-type" data-team-info="type">Closed</span>
 </div>
 <div id="team">Načítám…</div>
@@ -373,7 +373,7 @@ fetch(teamInfoUrl)
       const element = document.querySelector(`[data-team-info="${target}"]`);
       if (element && value !== undefined && value !== "") {
         const displayValue = target === "members" ? value.split("/")[0] : value;
-        element.textContent = numeric ? formatTeamNumber(displayValue) : displayValue;
+        element.textContent = target === "entry_requirement" ? String(displayValue).replace(/\s/g, "") : numeric ? formatTeamNumber(displayValue) : displayValue;
       }
     });
   })
