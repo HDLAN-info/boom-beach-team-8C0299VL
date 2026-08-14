@@ -228,6 +228,7 @@ html, body {
 .stat-history:hover, .stat-history:focus-visible { background: rgba(255,255,255,.35); transform: scale(1.03); outline: none; }
 .history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #e0d5b3; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
 .history-popup.visible { display: block; }
+.history-popup.team-wide { width: min(1640px, calc(100vw - 48px)); }
 .history-title { margin: 0 45px 12px 0; font-size: 30px; line-height: 1.15; color: #1c2730; }
 .history-close { position: absolute; top: 10px; right: 14px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); font-size: 32px; line-height: 40px; cursor: pointer; }
 .history-chart-wrap { height: 405px; }
@@ -315,7 +316,7 @@ html, body {
   <img class="team-header-image" src="img/team-header.png?v=20260814-3" alt="CZECH task force">
   <a class="team-join-link" href="https://link.boombeach.com/?url=boombeach%3A%2F%2FViewTaskforce%3Ftag%3D%23PV9LJUQ2" aria-label="Join CZECH task force"></a>
   <span class="team-info-value team-info-force" data-team-info="force_points">41&#8239;743</span>
-  <span class="team-info-value team-info-intels" data-team-info="intels_per_day">1&#8239;935</span>
+  <span class="team-info-value team-info-intels stat-history" tabindex="0" role="button" data-kind="team_intel" data-player="CZECH" data-team-info="intels_per_day">1&#8239;935</span>
   <span class="team-info-value team-info-tag" data-team-info="tag">#PV9LJUQ2</span>
   <span class="team-info-value team-info-members" data-team-info="members">50/50</span>
   <span class="team-info-value team-info-entry" data-team-info="entry_requirement">1&#8239;200</span>
@@ -332,7 +333,11 @@ html, body {
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
 
-const historyUrls = { intel: url + "&gid=1591390740", vp: url + "&gid=890280555" };
+const historyUrls = {
+  intel: url + "&gid=1591390740",
+  vp: url + "&gid=890280555",
+  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=G:H"
+};
 const teamInfoUrl = url + "&gid=861518513";
 const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
 
@@ -574,6 +579,12 @@ const weekendBackgroundPlugin = {
     if (!chartArea || !scales.x || !options.days) return;
 
     ctx.save();
+    if (options.greenRange && scales.y) {
+      const top = Math.max(chartArea.top, scales.y.getPixelForValue(options.greenRange.max));
+      const bottom = Math.min(chartArea.bottom, scales.y.getPixelForValue(options.greenRange.min));
+      ctx.fillStyle = "rgba(112, 190, 112, 0.18)";
+      ctx.fillRect(chartArea.left, top, chartArea.right - chartArea.left, bottom - top);
+    }
     options.days.forEach((day, i) => {
       if (day !== 0 && day !== 6) return;
       const right = Math.min(chartArea.right, scales.x.getPixelForValue(i));
@@ -592,10 +603,12 @@ function parseHistory(text) {
   const labels = rows[0].slice(2).map(clean), byTag = new Map();
   rows.slice(1).forEach(c => {
     const recentValues = c.slice(2).map(raw => ({ raw: clean(raw), value: Number(clean(raw)) })).filter(p => p.raw !== "" && Number.isFinite(p.value)).slice(-30);
+    const chartClock = new Date();
+    chartClock.setMinutes(chartClock.getMinutes() - 105);
+    chartClock.setHours(12, 0, 0, 0);
     const points = recentValues.map((point, i) => {
       const daysAgo = recentValues.length - i;
-      const date = new Date();
-      date.setHours(12, 0, 0, 0);
+      const date = new Date(chartClock);
       date.setDate(date.getDate() - daysAgo);
       return {
         ...point,
@@ -608,13 +621,38 @@ function parseHistory(text) {
   return byTag;
 }
 
+function parseCzechDate(value) {
+  const match = clean(value).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (!match) return null;
+  const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), 12, 0, 0, 0);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function parseTeamIntelHistory(text) {
+  const chartClock = new Date();
+  chartClock.setMinutes(chartClock.getMinutes() - 105);
+  chartClock.setHours(12, 0, 0, 0);
+  return text.trim().split(/\r?\n/).slice(1).map(parseCSVRow).map(columns => {
+    const date = parseCzechDate(columns[0]);
+    const raw = clean(columns[1]);
+    const value = Number(raw);
+    if (!date || raw === "" || !Number.isFinite(value)) return null;
+    const daysAgo = Math.round((chartClock - date) / 86400000);
+    return {
+      raw,
+      value,
+      label: daysAgo === 1 ? "Včera" : `${daysAgo} d.`,
+      dayOfWeek: date.getDay()
+    };
+  }).filter(Boolean).slice(-30);
+}
 async function loadHistory(kind) {
-  if (!historyCache[kind]) historyCache[kind] = fetch(historyUrls[kind]).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }).then(parseHistory).catch(error => { delete historyCache[kind]; throw error; });
+  if (!historyCache[kind]) historyCache[kind] = fetch(historyUrls[kind]).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); }).then(kind === "team_intel" ? parseTeamIntelHistory : parseHistory).catch(error => { delete historyCache[kind]; throw error; });
   return historyCache[kind];
 }
 
 function positionHistoryPopup(anchor) {
-  const rect = anchor.getBoundingClientRect(), width = Math.min(820, window.innerWidth - 48), height = 500;
+  const rect = anchor.getBoundingClientRect(), width = historyPopup.getBoundingClientRect().width, height = 500;
   let left = rect.right + 18;
   if (left + width > window.innerWidth - 24) left = rect.left - width - 18;
   historyPopup.style.left = `${Math.max(24, Math.min(left, window.innerWidth - width - 24))}px`;
@@ -622,12 +660,15 @@ function positionHistoryPopup(anchor) {
 }
 
 async function showHistory(anchor, pin = false) {
-  clearTimeout(historyCloseTimer); historyPinned = pin; historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
+  clearTimeout(historyCloseTimer); historyPinned = pin;
   const kind = anchor.dataset.kind, wrap = historyPopup.querySelector(".history-chart-wrap");
-  historyTitle.textContent = `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
+  historyPopup.classList.toggle("team-wide", kind === "team_intel");
+  historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
+  historyTitle.textContent = kind === "team_intel" ? "CZECH – stav intelů za posledních 30 dnů" : `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
   wrap.innerHTML = '<div class="history-message">Načítám historii…</div>';
   try {
-    const points = (await loadHistory(kind)).get(anchor.dataset.tag.toUpperCase()) || [];
+    const history = await loadHistory(kind);
+    const points = kind === "team_intel" ? history : history.get(anchor.dataset.tag.toUpperCase()) || [];
     if (!points.length) { wrap.innerHTML = '<div class="history-message">Pro tohoto hráče zatím není historie k dispozici.</div>'; return; }
     wrap.innerHTML = '<canvas></canvas>';
     if (historyChart) historyChart.destroy();
@@ -653,10 +694,21 @@ async function showHistory(anchor, pin = false) {
         interaction: { intersect: false, mode: "index" },
         plugins: {
           legend: { display: false },
-          weekendBackground: { days: points.map(p => p.dayOfWeek) }
+          weekendBackground: {
+            days: points.map(p => p.dayOfWeek),
+            greenRange: kind === "team_intel" ? { min: 1800, max: 2200 } : null
+          }
         },
         scales: {
-          x: { ticks: { font: { size: 16 }, maxTicksLimit: 10 } },
+          x: {
+            ticks: {
+              font: { size: 16 },
+              autoSkip: false,
+              callback(value, index, ticks) {
+                return index % 3 === 0 || index === ticks.length - 1 ? this.getLabelForValue(value) : "";
+              }
+            }
+          },
           y: { ticks: { font: { size: 16 }, precision: 0 } }
         }
       }
