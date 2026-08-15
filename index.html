@@ -14,6 +14,14 @@
   src: url("fonts/broshk.ttf") format("truetype");
 }
 
+@font-face {
+  font-family: "DSEG7-Classic";
+  src: url("fonts/DSEG7Classic-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -233,6 +241,42 @@ html, body {
 .history-close { position: absolute; top: 10px; right: 14px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); font-size: 32px; line-height: 40px; cursor: pointer; }
 .history-chart-wrap { height: 405px; }
 .history-message { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 25px; color: #333; text-align: center; }
+.operations-popup { left: 50%; top: 50%; width: min(900px, calc(100vw - 48px)); height: 480px; transform: translate(-50%, -50%); text-align: center; }
+.operations-content { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; font-family: "Trebuchet MS", Arial, sans-serif; color: #fff; }
+.operations-title,
+.operations-start,
+.operations-next,
+.operations-countdown {
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0 5px 0 rgba(0,0,0,0.6);
+}
+.operations-title { margin: 0 45px 20px; color: #ffcb20; font-size: 96px; line-height: 1.1; }
+.operations-start { margin: 0 0 53px; font-size: 44.2px; font-weight: 600; line-height: 1.2; }
+#operationsStartTime { color: #55d63b; font-size: inherit; }
+.operations-next { margin: 0 0 20px; font-size: 32px; font-weight: 600; line-height: 1.2; }
+.operations-countdown {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  box-sizing: border-box;
+  padding: 18px 36px 18px 18px;
+  border: 4px solid #fff;
+  border-radius: 18px;
+  background: #000;
+  font-family: "DSEG7-Classic", monospace;
+  font-size: 72px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.operations-countdown-unit { display: inline-block; min-width: 92px; text-align: center; }
+.operations-countdown-separator { display: inline-block; width: 38px; text-align: center; }
 
 .team-header {
   position: relative;
@@ -269,18 +313,40 @@ html, body {
 }
 
 
-.team-join-link {
+.team-action {
   position: absolute;
   left: 85.9%;
-  top: 24.7%;
   width: 12.8%;
   height: 14.6%;
-  display: block;
-  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  border: 0;
   border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+  font-size: 41.6px;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  text-shadow:
+    -2px -2px 0 #000,
+     2px -2px 0 #000,
+    -2px  2px 0 #000,
+     2px  2px 0 #000,
+     0 5px 0 rgba(0,0,0,0.6);
 }
 
-.team-join-link:focus-visible {
+.team-action-join { top: 24.7%; cursor: pointer; }
+.team-action-operations { top: 42.3%; }
+.team-action-awards { top: 60.0%; }
+.team-action-stats { top: 77.8%; }
+
+.team-action-join:focus-visible {
   outline: 4px solid #fff;
   outline-offset: -5px;
 }
@@ -313,8 +379,11 @@ html, body {
 <body>
 
 <div class="team-header" aria-label="Informace o týmu">
-  <img class="team-header-image" src="img/team-header.png?v=20260814-3" alt="CZECH task force">
-  <a class="team-join-link" href="https://link.boombeach.com/?url=boombeach%3A%2F%2FViewTaskforce%3Ftag%3D%23PV9LJUQ2" aria-label="Join CZECH task force"></a>
+  <img class="team-header-image" src="img/team-header.png?v=20260815-1" alt="CZECH task force">
+  <a class="team-action team-action-join" href="https://link.boombeach.com/?url=boombeach%3A%2F%2FViewTaskforce%3Ftag%3D%23PV9LJUQ2" aria-label="Připojit se k CZECH task force">PŘIPOJIT</a>
+  <button id="operationsButton" class="team-action team-action-operations" type="button">OPERACE</button>
+  <span class="team-action team-action-awards">DIPLOMY</span>
+  <span class="team-action team-action-stats">STATISTIKA</span>
   <span class="team-info-value team-info-force" data-team-info="force_points"></span>
   <span class="team-info-value team-info-intels stat-history" tabindex="0" role="button" data-kind="team_intel" data-player="CZECH" data-team-info="intels_per_day"></span>
   <span class="team-info-value team-info-tag" data-team-info="tag">#PV9LJUQ2</span>
@@ -323,11 +392,22 @@ html, body {
   <span class="team-info-value team-info-type" data-team-info="type">Closed</span>
 </div>
 <div id="team">Načítám…</div>
-<div class="last-update">Last update: <span id="lastUpdateValue"></span></div>
+<div class="last-update">Poslední aktualizace: <span id="lastUpdateValue"></span></div>
 <div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
   <button class="history-close" type="button" aria-label="Zavřít">&times;</button>
   <h2 id="historyTitle" class="history-title"></h2>
   <div class="history-chart-wrap"><canvas></canvas></div>
+</div>
+<div id="operationsPopup" class="history-popup operations-popup" role="dialog" aria-modal="true" aria-labelledby="operationsTitle">
+  <button class="history-close operations-close" type="button" aria-label="Zavřít">&times;</button>
+  <div class="operations-content">
+    <h2 id="operationsTitle" class="operations-title">DUPLEXITY</h2>
+    <p class="operations-start">START OPERACE - <span id="operationsStartTime">--:--</span></p>
+    <p class="operations-next">DALŠÍ OPERACE ZAČÍNÁ ZA</p>
+    <div id="operationsCountdown" class="operations-countdown" role="timer" aria-live="off" aria-label="Čas do další operace">
+      <span id="operationsHours" class="operations-countdown-unit">00</span><span class="operations-countdown-separator">:</span><span id="operationsMinutes" class="operations-countdown-unit">00</span><span class="operations-countdown-separator">:</span><span id="operationsSeconds" class="operations-countdown-unit">00</span>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -340,6 +420,7 @@ const historyUrls = {
 };
 const teamInfoUrl = url + "&gid=861518513";
 const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
+const operationsScheduleUrl = "https://docs.google.com/spreadsheets/d/1qm-39cW6c-xFX_8Bw6od3LNd5QHvMqSrzHY4frf6OPI/gviz/tq?tqx=out:csv&gid=901175290&range=A:B";
 const dataCachePromise = fetch("data/cache.json", { cache: "no-store" }).then(response => {
   if (!response.ok) throw new Error(`Cache HTTP ${response.status}`);
   return response.json();
@@ -752,7 +833,75 @@ document.addEventListener("keydown", e => { const stat = e.target.closest(".stat
 historyPopup.addEventListener("mouseenter", () => clearTimeout(historyCloseTimer));
 historyPopup.addEventListener("mouseleave", scheduleHistoryClose);
 historyPopup.querySelector(".history-close").addEventListener("click", () => closeHistory(true));
-window.addEventListener("resize", () => closeHistory(true));</script>
+window.addEventListener("resize", () => closeHistory(true));
+
+const operationsButton = document.getElementById("operationsButton");
+const operationsPopup = document.getElementById("operationsPopup");
+const operationsStartTime = document.getElementById("operationsStartTime");
+const operationsHours = document.getElementById("operationsHours");
+const operationsMinutes = document.getElementById("operationsMinutes");
+const operationsSeconds = document.getElementById("operationsSeconds");
+let operationsCountdownTimer = null;
+let operationsSchedule = [];
+
+function parseOperationsSchedule(text) {
+  return text.trim().split(/\r?\n/).slice(1).map(parseCSVRow).map(columns => {
+    const dateMatch = clean(columns[0]).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    const timeMatch = clean(columns[1]).match(/^(\d{1,2}):(\d{2})$/);
+    if (!dateMatch || !timeMatch) return null;
+    const date = new Date(Number(dateMatch[3]), Number(dateMatch[2]) - 1, Number(dateMatch[1]), Number(timeMatch[1]), Number(timeMatch[2]), 0, 0);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }).filter(Boolean).sort((a, b) => a - b);
+}
+
+const operationsSchedulePromise = loadData("operationsScheduleCsv", operationsScheduleUrl)
+  .then(parseOperationsSchedule)
+  .then(schedule => { operationsSchedule = schedule; return schedule; })
+  .catch(error => { console.error("Operations schedule load failed", error); return []; });
+
+function getNextOperationTime(now = new Date()) {
+  return operationsSchedule.find(date => date > now) || null;
+}
+
+function updateOperationsCountdown() {
+  const target = getNextOperationTime();
+  if (!target) {
+    operationsStartTime.textContent = "--:--";
+    operationsHours.textContent = "--";
+    operationsMinutes.textContent = "--";
+    operationsSeconds.textContent = "--";
+    return;
+  }
+  operationsStartTime.textContent = `${target.getHours()}:${String(target.getMinutes()).padStart(2, "0")}`;
+  const remainingSeconds = Math.max(0, Math.ceil((target - Date.now()) / 1000));
+  const hours = Math.floor(remainingSeconds / 3600);
+  const minutes = Math.floor((remainingSeconds % 3600) / 60);
+  const seconds = remainingSeconds % 60;
+  operationsHours.textContent = String(hours).padStart(2, "0");
+  operationsMinutes.textContent = String(minutes).padStart(2, "0");
+  operationsSeconds.textContent = String(seconds).padStart(2, "0");
+}
+
+async function openOperations() {
+  closeHistory(true);
+  operationsPopup.classList.add("visible");
+  await operationsSchedulePromise;
+  updateOperationsCountdown();
+  clearInterval(operationsCountdownTimer);
+  operationsCountdownTimer = setInterval(updateOperationsCountdown, 1000);
+}
+function closeOperations() {
+  operationsPopup.classList.remove("visible");
+  clearInterval(operationsCountdownTimer);
+  operationsCountdownTimer = null;
+}
+operationsButton.addEventListener("click", event => { event.stopPropagation(); openOperations(); });
+operationsPopup.querySelector(".operations-close").addEventListener("click", closeOperations);
+document.addEventListener("click", event => {
+  if (!event.target.closest("#operationsPopup") && !event.target.closest("#operationsButton")) closeOperations();
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeOperations(); });
+</script>
 
 </body>
 </html>

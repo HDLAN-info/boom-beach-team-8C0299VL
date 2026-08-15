@@ -9,7 +9,8 @@ const sources = {
   lastUpdateCsv: "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6",
   intelHistoryCsv: `${publishedBase}&gid=1591390740`,
   vpHistoryCsv: `${publishedBase}&gid=890280555`,
-  teamIntelHistoryCsv: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=A:H"
+  teamIntelHistoryCsv: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=A:H",
+  operationsScheduleCsv: "https://docs.google.com/spreadsheets/d/1qm-39cW6c-xFX_8Bw6od3LNd5QHvMqSrzHY4frf6OPI/gviz/tq?tqx=out:csv&gid=901175290&range=A:B"
 };
 
 function parseCsvRow(row) {
