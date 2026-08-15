@@ -43,7 +43,12 @@ function toCsvRow(columns) {
 
 function trimPlayerHistory(text) {
   return text.trim().split(/\r?\n/).map(parseCsvRow)
-    .map(columns => toCsvRow([...columns.slice(0, 2), ...columns.slice(2).slice(-30)]))
+    .map((columns, rowIndex) => {
+      const history = rowIndex === 0
+        ? columns.slice(2).slice(-30)
+        : columns.slice(2).filter(value => String(value).trim() !== "").slice(-30);
+      return toCsvRow([...columns.slice(0, 2), ...history]);
+    })
     .join("\n");
 }
 
@@ -65,10 +70,20 @@ const transforms = {
 };
 
 async function download([key, url]) {
-  const response = await fetch(url, { headers: { "user-agent": "boom-beach-cache-updater" }, signal: AbortSignal.timeout(60000) });
-  if (!response.ok) throw new Error(`${key}: HTTP ${response.status}`);
-  const text = (await response.text()).replace(/\r\n/g, "\n");
-  return [key, transforms[key] ? transforms[key](text) : text];
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(url, { headers: { "user-agent": "boom-beach-cache-updater" }, signal: AbortSignal.timeout(90000) });
+      if (!response.ok) throw new Error(`${key}: HTTP ${response.status}`);
+      const text = (await response.text()).replace(/\r\n/g, "\n");
+      console.log(`${key} downloaded.`);
+      return [key, transforms[key] ? transforms[key](text) : text];
+    } catch (error) {
+      lastError = error;
+      console.warn(`${key} attempt ${attempt} failed.`);
+    }
+  }
+  throw lastError;
 }
 
 const cache = Object.fromEntries(await Promise.all(Object.entries(sources).map(download)));
