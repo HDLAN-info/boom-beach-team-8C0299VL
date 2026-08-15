@@ -895,10 +895,22 @@ function updateOperationsCountdown() {
   operationsSeconds.textContent = String(seconds).padStart(2, "0");
 }
 
+async function refreshOperationsSchedule() {
+  try {
+    const separator = operationsScheduleUrl.includes("?") ? "&" : "?";
+    const response = await fetch(`${operationsScheduleUrl}${separator}_=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Operations schedule HTTP ${response.status}`);
+    operationsSchedule = parseOperationsSchedule(await response.text());
+  } catch (error) {
+    console.warn("Live operations schedule load failed; using cached data", error);
+    await operationsSchedulePromise;
+  }
+}
+
 async function openOperations() {
   closeHistory(true);
   operationsPopup.classList.add("visible");
-  await operationsSchedulePromise;
+  await refreshOperationsSchedule();
   updateOperationsCountdown();
   clearInterval(operationsCountdownTimer);
   operationsCountdownTimer = setInterval(updateOperationsCountdown, 1000);
