@@ -340,7 +340,26 @@ const historyUrls = {
 };
 const teamInfoUrl = url + "&gid=861518513";
 const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
+const dataCachePromise = fetch("data/cache.json", { cache: "no-store" }).then(response => {
+  if (!response.ok) throw new Error(`Cache HTTP ${response.status}`);
+  return response.json();
+});
 
+function loadData(cacheKey, fallbackUrl) {
+  return dataCachePromise
+    .then(cache => {
+      const value = cache[cacheKey];
+      if (typeof value !== "string") throw new Error(`Cache value ${cacheKey} is missing`);
+      return value;
+    })
+    .catch(error => {
+      console.warn(`Cache load failed for ${cacheKey}; using Google Sheets`, error);
+      return fetch(fallbackUrl).then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      });
+    });
+}
 const medalIcon = "img/medal.webp";
 const intelIcon = "img/intel.webp";
 
@@ -375,11 +394,7 @@ function formatTeamNumber(value) {
   return Number.isFinite(number) ? new Intl.NumberFormat("cs-CZ").format(number).replace(/\s/g, "\u202F") : value;
 }
 
-fetch(teamInfoUrl)
-  .then(response => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.text();
-  })
+loadData("teamInfoCsv", teamInfoUrl)
   .then(text => {
     const values = new Map(
       text.trim().split(/\r?\n/).map(row => {
@@ -407,11 +422,7 @@ fetch(teamInfoUrl)
     });
   })
   .catch(error => console.error("Team info load failed", error));
-const lastUpdatePromise = fetch(lastUpdateUrl)
-  .then(response => {
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    return response.text();
-  })
+const lastUpdatePromise = loadData("lastUpdateCsv", lastUpdateUrl)
   .then(text => {
     const value = clean(parseCSVRow(text.trim())[0]);
     if (value) document.getElementById("lastUpdateValue").textContent = value.replace(/(\d{1,2}:\d{2}):\d{2}\b/, "$1");
@@ -434,8 +445,7 @@ function isTrue(v) {
   return String(v).trim().toUpperCase() === "TRUE";
 }
 
-fetch(url)
-.then(r => r.text())
+loadData("playersCsv", url)
 .then(text => {
   const rows = text.trim().split("\n");
   const header = parseCSVRow(rows[0]).map(h => clean(h).toLowerCase());
@@ -658,10 +668,8 @@ function parseTeamIntelHistory(text) {
 }
 async function loadHistory(kind) {
   if (!historyCache[kind]) {
-    const historyTextPromise = fetch(historyUrls[kind]).then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.text();
-    });
+    const cacheKeys = { intel: "intelHistoryCsv", vp: "vpHistoryCsv", team_intel: "teamIntelHistoryCsv" };
+    const historyTextPromise = loadData(cacheKeys[kind], historyUrls[kind]);
     historyCache[kind] = (kind === "team_intel"
       ? historyTextPromise.then(parseTeamIntelHistory)
       : Promise.all([historyTextPromise, lastUpdatePromise]).then(([text, lastUpdateDate]) => parseHistory(text, lastUpdateDate))
