@@ -238,8 +238,7 @@ html, body {
 .history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #e0d5b3; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
 .history-popup.visible { display: block; }
 .history-popup.team-wide { width: min(1640px, calc(100vw - 48px)); }
-.history-title { margin: 0 45px 12px 0; font-size: 30px; line-height: 1.15; color: #1c2730; }
-.history-close { position: absolute; top: 10px; right: 14px; width: 44px; height: 44px; border: 0; border-radius: 50%; background: rgba(255,255,255,.55); font-size: 32px; line-height: 40px; cursor: pointer; }
+.history-title { margin: 0 0 12px; font-size: 30px; line-height: 1.15; color: #1c2730; }
 .history-chart-wrap { height: 405px; }
 .history-message { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 25px; color: #333; text-align: center; }
 .operations-popup { left: 50%; top: 50%; width: min(900px, calc(100vw - 48px)); height: 480px; transform: translate(-50%, -50%); text-align: center; }
@@ -395,12 +394,10 @@ html, body {
 <div id="team">Načítám…</div>
 <div class="last-update">Poslední aktualizace: <span id="lastUpdateValue"></span></div>
 <div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
-  <button class="history-close" type="button" aria-label="Zavřít">&times;</button>
   <h2 id="historyTitle" class="history-title"></h2>
   <div class="history-chart-wrap"><canvas></canvas></div>
 </div>
 <div id="operationsPopup" class="history-popup operations-popup" role="dialog" aria-modal="true" aria-labelledby="operationsTitle">
-  <button class="history-close operations-close" type="button" aria-label="Zavřít">&times;</button>
   <div class="operations-content">
     <h2 id="operationsTitle" class="operations-title">DUPLEXITY</h2>
     <p class="operations-start">START TASK FORCE OPERACE - <span id="operationsStartTime">--:--</span></p>
@@ -833,7 +830,6 @@ document.addEventListener("click", e => { const stat = e.target.closest(".stat-h
 document.addEventListener("keydown", e => { const stat = e.target.closest(".stat-history"); if (stat && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showHistory(stat, true); } if (e.key === "Escape") closeHistory(true); });
 historyPopup.addEventListener("mouseenter", () => clearTimeout(historyCloseTimer));
 historyPopup.addEventListener("mouseleave", scheduleHistoryClose);
-historyPopup.querySelector(".history-close").addEventListener("click", () => closeHistory(true));
 window.addEventListener("resize", () => closeHistory(true));
 
 const operationsButton = document.getElementById("operationsButton");
@@ -897,7 +893,6 @@ function closeOperations() {
   operationsCountdownTimer = null;
 }
 operationsButton.addEventListener("click", event => { event.stopPropagation(); openOperations(); });
-operationsPopup.querySelector(".operations-close").addEventListener("click", closeOperations);
 document.addEventListener("click", event => {
   if (!event.target.closest("#operationsPopup") && !event.target.closest("#operationsButton")) closeOperations();
 });
