@@ -32,6 +32,11 @@ jobs:
 
             const page = await browser.newPage();
 
+            await page.setViewport({
+              width: 2100,
+              height: 1000
+            });
+
             await page.goto(
               'https://hdlan-info.github.io/boom-beach-team-PV9LJUQ2/',
               { waitUntil: 'networkidle2' }
@@ -42,20 +47,16 @@ jobs:
 
             await page.emulateMediaType('screen');
 
-            await page.setViewport({
-              width: 2200,
-              height: 4600
-            });
-
-            // vynutí background do bitmapy
-            await page.evaluate(() => {
-              document.body.style.background = "#f5edd1";
-            });
+            const pageWidth = await page.evaluate(() =>
+              Math.ceil(document.documentElement.scrollWidth)
+            );
+            await page.setViewport({ width: pageWidth, height: 1000 });
 
             await page.screenshot({
               path: 'leaderboard.jpg',
               type: 'jpeg',
-              quality: 95
+              quality: 95,
+              fullPage: true
             });
 
             await browser.close();

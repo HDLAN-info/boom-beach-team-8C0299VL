@@ -29,7 +29,7 @@ html, body {
   font-family: "Trebuchet MS", Arial, sans-serif;
   background:
     url("img/noise.png") repeat,
-    #f5edd1;
+    #f0e2bc;
 }
 
 #team {
@@ -37,18 +37,19 @@ html, body {
   padding: 0 16px 16px;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 16px;
 }
 
 .member {
+  min-width: 0;
   background:
     url("img/noise.png") repeat,
     #e0d5b3;
   border-radius: 16px;
   padding: 2px 8px 2px 2px;
   display: grid;
-  grid-template-columns: 124px 1fr 150px 180px;
+  grid-template-columns: 124px minmax(0, 1fr) 150px 180px;
   align-items: center;
   gap: 20px;
   height: 162px;
@@ -402,8 +403,8 @@ html, body {
   <button class="history-close operations-close" type="button" aria-label="Zavřít">&times;</button>
   <div class="operations-content">
     <h2 id="operationsTitle" class="operations-title">DUPLEXITY</h2>
-    <p class="operations-start">START OPERACE - <span id="operationsStartTime">--:--</span></p>
-    <p class="operations-next">DALŠÍ OPERACE ZAČÍNÁ ZA</p>
+    <p class="operations-start">START TASK FORCE OPERACE - <span id="operationsStartTime">--:--</span></p>
+    <p class="operations-next">DALŠÍ ZAČÍNÁ ZA</p>
     <div id="operationsCountdown" class="operations-countdown" role="timer" aria-live="off" aria-label="Čas do další operace">
       <span id="operationsHours" class="operations-countdown-unit">00</span><span class="operations-countdown-separator">:</span><span id="operationsMinutes" class="operations-countdown-unit">00</span><span class="operations-countdown-separator">:</span><span id="operationsSeconds" class="operations-countdown-unit">00</span>
     </div>
