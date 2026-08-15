@@ -235,13 +235,13 @@ html, body {
 
 .stat-history { cursor: pointer; border-radius: 12px; transition: background-color .15s ease, transform .15s ease; user-select: none; }
 .stat-history:hover, .stat-history:focus-visible { background: rgba(255,255,255,.35); transform: scale(1.03); outline: none; }
-.history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #e0d5b3; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
+.history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #f0e2bc; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
 .history-popup.visible { display: block; }
-.history-popup.team-wide { width: min(1640px, calc(100vw - 48px)); }
+.history-popup.team-wide { width: min(1640px, calc(100vw - 48px)); background: url("img/noise.png") repeat, #e0d5b3; }
 .history-title { margin: 0 0 12px; font-size: 30px; line-height: 1.15; color: #1c2730; }
 .history-chart-wrap { height: 405px; }
 .history-message { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 25px; color: #333; text-align: center; }
-.operations-popup { left: 50%; top: 50%; width: min(900px, calc(100vw - 48px)); height: 480px; transform: translate(-50%, -50%); text-align: center; }
+.operations-popup { left: 50%; top: 50%; width: min(900px, calc(100vw - 48px)); height: 480px; transform: translate(-50%, -50%); text-align: center; background: url("img/noise.png") repeat, #e0d5b3; }
 .operations-content { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; font-family: "Trebuchet MS", Arial, sans-serif; color: #fff; }
 .operations-title,
 .operations-start,
@@ -342,7 +342,7 @@ html, body {
 }
 
 .team-action-join { top: 24.7%; cursor: pointer; }
-.team-action-operations { top: 42.3%; }
+.team-action-operations { top: 42.3%; cursor: pointer; }
 .team-action-awards { top: 60.0%; }
 .team-action-stats { top: 77.8%; }
 
@@ -610,9 +610,10 @@ function autoShrinkNames() {
 
 // 👇 popup kód je MIMO funkci
 
-let popup = null;
+let popup = null, popupCloseTimer = null;
 
 function showAccounts(el) {
+  clearTimeout(popupCloseTimer);
   hidePopup();
 
   const main = el.dataset.main;
@@ -626,6 +627,8 @@ function showAccounts(el) {
   popup.className = "account-popup";
   popup.innerHTML = list.join("<br>");
 
+  popup.addEventListener("mouseenter", () => clearTimeout(popupCloseTimer));
+  popup.addEventListener("mouseleave", schedulePopupClose);
   document.body.appendChild(popup);
 
   const rect = el.getBoundingClientRect();
@@ -645,16 +648,29 @@ function showAccounts(el) {
 }
 
 function hidePopup() {
+  clearTimeout(popupCloseTimer);
   if (popup) {
     popup.remove();
     popup = null;
   }
+}
+function schedulePopupClose() {
+  clearTimeout(popupCloseTimer);
+  popupCloseTimer = setTimeout(hidePopup, 250);
 }
 
 document.addEventListener("click", e => {
   const el = e.target.closest(".account-name");
   if (el) showAccounts(el);
   else hidePopup();
+});
+document.addEventListener("mouseover", e => {
+  const el = e.target.closest(".account-name");
+  if (el && !el.contains(e.relatedTarget) && matchMedia("(hover: hover)").matches) showAccounts(el);
+});
+document.addEventListener("mouseout", e => {
+  const el = e.target.closest(".account-name");
+  if (el && !el.contains(e.relatedTarget)) schedulePopupClose();
 });
 
 window.addEventListener("scroll", hidePopup);
