@@ -52,9 +52,14 @@ function trimPlayerHistory(text) {
     .join("\n");
 }
 
-function trimRows(text, maximumDataRows) {
-  const rows = text.trim().split(/\r?\n/);
-  return [rows[0], ...rows.slice(1).filter(row => row.trim() !== "").slice(-maximumDataRows)].join("\n");
+function trimTeamIntelHistory(text) {
+  const rows = text.trim().split(/\r?\n/).map(parseCsvRow);
+  const populatedRows = rows.slice(1).filter(columns => {
+    const date = String(columns[1] ?? "").trim();
+    const value = String(columns[7] ?? "").trim();
+    return date !== "" && value !== "" && Number.isFinite(Number(value));
+  });
+  return [rows[0], ...populatedRows.slice(-30)].map(toCsvRow).join("\n");
 }
 
 function trimPlayers(text) {
@@ -66,7 +71,7 @@ const transforms = {
   playersCsv: trimPlayers,
   intelHistoryCsv: trimPlayerHistory,
   vpHistoryCsv: trimPlayerHistory,
-  teamIntelHistoryCsv: text => trimRows(text, 30)
+  teamIntelHistoryCsv: trimTeamIntelHistory
 };
 
 async function download([key, url]) {
