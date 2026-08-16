@@ -2,14 +2,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const publishedBase = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
+const publishedBase = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv";
 const sources = {
   playersCsv: publishedBase,
   teamInfoCsv: `${publishedBase}&gid=861518513`,
-  lastUpdateCsv: "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6",
+  lastUpdateCsv: "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv&gid=861518513&range=B6",
   intelHistoryCsv: `${publishedBase}&gid=1591390740`,
   vpHistoryCsv: `${publishedBase}&gid=890280555`,
-  teamIntelHistoryCsv: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=A:H",
+  teamIntelHistoryCsv: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/export?format=csv&gid=0&range=A:H",
   operationsScheduleCsv: "https://docs.google.com/spreadsheets/d/1qm-39cW6c-xFX_8Bw6od3LNd5QHvMqSrzHY4frf6OPI/gviz/tq?tqx=out:csv&gid=901175290&range=A:B",
   teamStatsCsv: "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv&gid=861518513&range=B8:B16"
 };
@@ -80,7 +80,9 @@ async function download([key, url]) {
   let lastError;
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
-      const response = await fetch(url, { headers: { "user-agent": "boom-beach-cache-updater" }, signal: AbortSignal.timeout(90000) });
+      const separator = url.includes("?") ? "&" : "?";
+      const requestUrl = `${url}${separator}_=${Date.now()}-${attempt}`;
+      const response = await fetch(requestUrl, { headers: { "user-agent": "boom-beach-cache-updater", "cache-control": "no-cache" }, signal: AbortSignal.timeout(90000) });
       if (!response.ok) throw new Error(`${key}: HTTP ${response.status}`);
       const text = (await response.text()).replace(/\r\n/g, "\n");
       console.log(`${key} downloaded.`);
