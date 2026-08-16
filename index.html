@@ -277,6 +277,17 @@ html, body {
 }
 .operations-countdown-unit { display: inline-block; min-width: 92px; text-align: center; }
 .operations-countdown-separator { display: inline-block; width: 38px; text-align: center; }
+.statistics-popup { left: 50%; top: 50%; width: min(1100px, calc(100vw - 48px)); height: auto; min-height: 500px; transform: translate(-50%, -50%); padding: 30px 38px; background: url("img/noise.png") repeat, #e0d5b3; font-family: "Trebuchet MS", Arial, sans-serif; color: #292a2d; }
+.statistics-columns { display: grid; grid-template-columns: 1.15fr .85fr; gap: 60px; }
+.statistics-heading { margin: 0 0 18px; color: #fff; font-size: 34px; line-height: 1.1; text-shadow: -2px -2px 0 #343434, 2px -2px 0 #343434, -2px 2px 0 #343434, 2px 2px 0 #343434; }
+.statistics-list { display: grid; gap: 17px; margin: 0; }
+.statistics-item { margin: 0; }
+.statistics-label { display: block; font-size: 27px; font-weight: 900; line-height: 1.05; }
+.statistics-value { display: block; min-height: 28px; margin-top: 2px; font-size: 25px; font-weight: 500; line-height: 1.05; }
+@media (max-width: 760px) {
+  .statistics-popup { padding: 22px 24px; max-height: calc(100vh - 32px); overflow-y: auto; }
+  .statistics-columns { grid-template-columns: 1fr; gap: 28px; }
+}
 
 .team-header {
   position: relative;
@@ -344,7 +355,7 @@ html, body {
 .team-action-join { top: 24.7%; cursor: pointer; }
 .team-action-operations { top: 42.3%; cursor: pointer; }
 .team-action-awards { top: 60.0%; }
-.team-action-stats { top: 77.8%; }
+.team-action-stats { top: 77.8%; cursor: pointer; }
 
 .team-action-join:focus-visible {
   outline: 4px solid #fff;
@@ -383,7 +394,7 @@ html, body {
   <a class="team-action team-action-join" href="https://link.boombeach.com/?url=boombeach%3A%2F%2FViewTaskforce%3Ftag%3D%23PV9LJUQ2" aria-label="Připojit se k CZECH task force">PŘIPOJIT</a>
   <button id="operationsButton" class="team-action team-action-operations" type="button">OPERACE</button>
   <span class="team-action team-action-awards">DIPLOMY</span>
-  <span class="team-action team-action-stats">STATISTIKA</span>
+  <button id="statisticsButton" class="team-action team-action-stats" type="button">STATISTIKA</button>
   <span class="team-info-value team-info-force" data-team-info="force_points"></span>
   <span class="team-info-value team-info-intels stat-history" tabindex="0" role="button" data-kind="team_intel" data-player="CZECH" data-team-info="intels_per_day"></span>
   <span class="team-info-value team-info-tag" data-team-info="tag">#PV9LJUQ2</span>
@@ -407,6 +418,29 @@ html, body {
     </div>
   </div>
 </div>
+<div id="statisticsPopup" class="history-popup statistics-popup" role="dialog" aria-modal="true" aria-labelledby="statisticsHistoryTitle">
+  <div class="statistics-columns">
+    <section>
+      <h2 id="statisticsHistoryTitle" class="statistics-heading">HISTORIE TASK FORCE:</h2>
+      <div class="statistics-list">
+        <p class="statistics-item"><span class="statistics-label">Celkový počet zahájených operací</span><span class="statistics-value" data-team-stat="0">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Úspěšnost operací</span><span class="statistics-value" data-team-stat="1">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Nejčastěji zahajovaná operace</span><span class="statistics-value" data-team-stat="2">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Nejvyšší dosažená pozice v žebříčku</span><span class="statistics-value" data-team-stat="3">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Nejvyšší dosažený počet Force Pointů</span><span class="statistics-value" data-team-stat="4">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Task Force vytvořena</span><span class="statistics-value" data-team-stat="5">—</span></p>
+      </div>
+    </section>
+    <section>
+      <h2 class="statistics-heading">POSLEDNÍCH 30 DNÍ:</h2>
+      <div class="statistics-list">
+        <p class="statistics-item"><span class="statistics-label">Zahájené operace</span><span class="statistics-value" data-team-stat="6">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Úspěšnost operací</span><span class="statistics-value" data-team-stat="7">—</span></p>
+        <p class="statistics-item"><span class="statistics-label">Poslední zahájená operace</span><span class="statistics-value" data-team-stat="8">—</span></p>
+      </div>
+    </section>
+  </div>
+</div>
 
 <script>
 const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
@@ -419,6 +453,7 @@ const historyUrls = {
 const teamInfoUrl = url + "&gid=861518513";
 const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
 const operationsScheduleUrl = "https://docs.google.com/spreadsheets/d/1qm-39cW6c-xFX_8Bw6od3LNd5QHvMqSrzHY4frf6OPI/gviz/tq?tqx=out:csv&gid=901175290&range=A:B";
+const teamStatsUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv&gid=861518513&range=B8:B16";
 const dataCachePromise = fetch("data/cache.json", { cache: "no-store" }).then(response => {
   if (!response.ok) throw new Error(`Cache HTTP ${response.status}`);
   return response.json();
@@ -847,6 +882,36 @@ document.addEventListener("keydown", e => { const stat = e.target.closest(".stat
 historyPopup.addEventListener("mouseenter", () => clearTimeout(historyCloseTimer));
 historyPopup.addEventListener("mouseleave", scheduleHistoryClose);
 window.addEventListener("resize", () => closeHistory(true));
+
+const statisticsButton = document.getElementById("statisticsButton");
+const statisticsPopup = document.getElementById("statisticsPopup");
+const teamStatsPromise = loadData("teamStatsCsv", teamStatsUrl).then(text =>
+  text.trim().split(/\r?\n/).map(parseCSVRow).map(columns => clean(columns[0]))
+);
+
+async function openStatistics() {
+  closeHistory(true);
+  closeOperations();
+  statisticsPopup.classList.add("visible");
+  try {
+    const values = await teamStatsPromise;
+    statisticsPopup.querySelectorAll("[data-team-stat]").forEach(element => {
+      const index = Number(element.dataset.teamStat);
+      let value = values[index] || "—";
+      if ((index === 3 || index === 4) && value !== "—") value = formatTeamNumber(value);
+      if (index === 5 && value !== "—") value = `před ${formatTeamNumber(value)} dny`;
+      element.textContent = value;
+    });
+  } catch (error) {
+    console.error("Team statistics load failed", error);
+  }
+}
+function closeStatistics() { statisticsPopup.classList.remove("visible"); }
+statisticsButton.addEventListener("click", event => { event.stopPropagation(); openStatistics(); });
+document.addEventListener("click", event => {
+  if (!event.target.closest("#statisticsPopup") && !event.target.closest("#statisticsButton")) closeStatistics();
+});
+document.addEventListener("keydown", event => { if (event.key === "Escape") closeStatistics(); });
 
 const operationsButton = document.getElementById("operationsButton");
 const operationsPopup = document.getElementById("operationsPopup");
