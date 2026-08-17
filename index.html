@@ -443,15 +443,15 @@ html, body {
 </div>
 
 <script>
-const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQqE6PF33q7CNxxCxsS26B7gHSQui6Sw2sJtuFt_cJsWfqADrxVqnTTsRS9XVSNqWyZnJqVS6GhuwOk/pub?output=csv";
+const url = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv";
 
 const historyUrls = {
   intel: url + "&gid=1591390740",
   vp: url + "&gid=890280555",
-  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/gviz/tq?tqx=out:csv&sheet=SABOTAZE&range=A:H"
+  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/export?format=csv&gid=0&range=A:H"
 };
 const teamInfoUrl = url + "&gid=861518513";
-const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/gviz/tq?tqx=out:csv&sheet=TEAM%20INFO&range=B6";
+const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv&gid=861518513&range=B6";
 const operationsScheduleUrl = "https://docs.google.com/spreadsheets/d/1qm-39cW6c-xFX_8Bw6od3LNd5QHvMqSrzHY4frf6OPI/gviz/tq?tqx=out:csv&gid=901175290&range=A:B";
 const teamStatsUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv&gid=861518513&range=B8:B16";
 const dataCachePromise = fetch("data/cache.json", { cache: "no-store" }).then(response => {
@@ -459,19 +459,37 @@ const dataCachePromise = fetch("data/cache.json", { cache: "no-store" }).then(re
   return response.json();
 });
 
+function cacheIsFromToday(cache) {
+  const match = String(cache.lastUpdateCsv || "").match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
+  if (!match) return false;
+  const now = new Date();
+  return Number(match[1]) === now.getDate() && Number(match[2]) === now.getMonth() + 1 && Number(match[3]) === now.getFullYear();
+}
+
+const liveDataPromises = new Map();
+function loadLiveData(cacheKey, fallbackUrl) {
+  if (!liveDataPromises.has(cacheKey)) {
+    const separator = fallbackUrl.includes("?") ? "&" : "?";
+    const requestUrl = `${fallbackUrl}${separator}_=${Date.now()}`;
+    liveDataPromises.set(cacheKey, fetch(requestUrl, { cache: "no-store" }).then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.text();
+    }));
+  }
+  return liveDataPromises.get(cacheKey);
+}
+
 function loadData(cacheKey, fallbackUrl) {
   return dataCachePromise
     .then(cache => {
+      if (cacheKey !== "operationsScheduleCsv" && !cacheIsFromToday(cache)) throw new Error("Cache is from a previous day");
       const value = cache[cacheKey];
       if (typeof value !== "string") throw new Error(`Cache value ${cacheKey} is missing`);
       return value;
     })
     .catch(error => {
       console.warn(`Cache load failed for ${cacheKey}; using Google Sheets`, error);
-      return fetch(fallbackUrl).then(response => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.text();
-      });
+      return loadLiveData(cacheKey, fallbackUrl);
     });
 }
 const medalIcon = "img/medal.webp";
