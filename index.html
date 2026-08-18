@@ -871,6 +871,8 @@ async function showHistory(anchor, pin = false) {
           fill: true,
           tension: .25,
           pointRadius: points.length < 40 ? 4 : 0,
+          pointBackgroundColor: points.map(p => kind === "team_intel" && p.value === 2300 ? "#d62828" : (kind === "vp" ? "#d59b00" : "#1687c4")),
+          pointBorderColor: points.map(p => kind === "team_intel" && p.value === 2300 ? "#d62828" : (kind === "vp" ? "#d59b00" : "#1687c4")),
           pointHoverRadius: 7,
           borderWidth: 4
         }]
