@@ -851,7 +851,7 @@ async function showHistory(anchor, pin = false) {
   const kind = anchor.dataset.kind, wrap = historyPopup.querySelector(".history-chart-wrap");
   historyPopup.classList.toggle("team-wide", kind === "team_intel");
   historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
-  historyTitle.textContent = kind === "team_intel" ? "Stav intelů při ukončení TaskForce OP za posledních 30 dnů." : `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
+  historyTitle.textContent = kind === "team_intel" ? "CZECH - Stav intelů při ukončení TaskForce OP za posledních 30 dnů." : `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
   wrap.innerHTML = '<div class="history-message">Načítám historii…</div>';
   try {
     const history = await loadHistory(kind);
