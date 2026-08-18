@@ -459,13 +459,6 @@ const dataCachePromise = fetch("data/cache.json", { cache: "no-store" }).then(re
   return response.json();
 });
 
-function cacheIsFromToday(cache) {
-  const match = String(cache.lastUpdateCsv || "").match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/);
-  if (!match) return false;
-  const now = new Date();
-  return Number(match[1]) === now.getDate() && Number(match[2]) === now.getMonth() + 1 && Number(match[3]) === now.getFullYear();
-}
-
 const liveDataPromises = new Map();
 function loadLiveData(cacheKey, fallbackUrl) {
   if (!liveDataPromises.has(cacheKey)) {
@@ -479,13 +472,32 @@ function loadLiveData(cacheKey, fallbackUrl) {
   return liveDataPromises.get(cacheKey);
 }
 
+const alwaysLiveKeys = new Set(["teamInfoCsv", "teamIntelHistoryCsv", "teamStatsCsv", "lastUpdateCsv"]);
+const playerUpdateKeys = new Set(["playersCsv", "intelHistoryCsv", "vpHistoryCsv"]);
+function normalizedData(value) { return String(value || "").trim().replace(/\r\n/g, "\n"); }
+
 function loadData(cacheKey, fallbackUrl) {
   return dataCachePromise
-    .then(cache => {
-      if (cacheKey !== "operationsScheduleCsv" && !cacheIsFromToday(cache)) throw new Error("Cache is from a previous day");
-      const value = cache[cacheKey];
-      if (typeof value !== "string") throw new Error(`Cache value ${cacheKey} is missing`);
-      return value;
+    .then(async cache => {
+      const cachedValue = cache[cacheKey];
+      if (typeof cachedValue !== "string") throw new Error(`Cache value ${cacheKey} is missing`);
+
+      if (alwaysLiveKeys.has(cacheKey)) {
+        return loadLiveData(cacheKey, fallbackUrl).catch(error => {
+          console.warn(`Live check failed for ${cacheKey}; using cache`, error);
+          return cachedValue;
+        });
+      }
+
+      if (playerUpdateKeys.has(cacheKey)) {
+        const liveUpdate = await loadLiveData("lastUpdateCsv", lastUpdateUrl).catch(() => null);
+        if (liveUpdate !== null && normalizedData(liveUpdate) !== normalizedData(cache.lastUpdateCsv)) {
+          console.info(`Newer player data detected for ${cacheKey}; using Google Sheets`);
+          return loadLiveData(cacheKey, fallbackUrl);
+        }
+      }
+
+      return cachedValue;
     })
     .catch(error => {
       console.warn(`Cache load failed for ${cacheKey}; using Google Sheets`, error);
