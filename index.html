@@ -836,7 +836,6 @@ const weekendBackgroundPlugin = {
     ctx.restore();
   }
 };
-
 function parseCzechDateTime(value) {
   const match = clean(value).match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
   if (!match) return null;
@@ -945,7 +944,8 @@ async function showHistory(anchor, pin = false) {
           greenRange: null,
           redAt2300: false,
           maxValue: 1600,
-          cappedPointColor: "#7b3fc6"
+          cappedPointColor: "#7b3fc6",
+          centerPointsInDay: true
         }
       ];
       if (charts.some(chart => !chart.points.length)) {
@@ -957,24 +957,30 @@ async function showHistory(anchor, pin = false) {
         const chartList = Array.isArray(historyChart) ? historyChart : [historyChart];
         chartList.forEach(chart => chart.destroy());
       }
-      historyChart = charts.map((chartConfig, index) => new Chart(historyPopup.querySelector(`canvas[data-chart-index="${index}"]`), {
+      historyChart = charts.map((chartConfig, index) => {
+        const plottedPoints = chartConfig.points;
+        return new Chart(historyPopup.querySelector(`canvas[data-chart-index="${index}"]`), {
         type: "line",
         plugins: [weekendBackgroundPlugin],
         data: {
           labels: chartConfig.points.map(p => p.label),
           datasets: [{
-            data: chartConfig.points.map(p => chartConfig.maxValue ? Math.min(p.value, chartConfig.maxValue) : p.value),
+            data: plottedPoints.map((p, pointIndex) => {
+              const value = chartConfig.maxValue ? Math.min(p.value, chartConfig.maxValue) : p.value;
+              return chartConfig.centerPointsInDay ? { x: pointIndex - 0.5, y: value } : value;
+            }),
             borderColor: chartConfig.color,
             backgroundColor: chartConfig.fill,
             fill: true,
+            clip: chartConfig.maxValue ? false : undefined,
             tension: .25,
             pointRadius: chartConfig.points.length < 40 ? 4 : 0,
-            pointBackgroundColor: chartConfig.points.map(p => chartConfig.maxValue && p.value > chartConfig.maxValue
+            pointBackgroundColor: plottedPoints.map(p => p && chartConfig.maxValue && p.value > chartConfig.maxValue
               ? chartConfig.cappedPointColor
-              : (chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color)),
-            pointBorderColor: chartConfig.points.map(p => chartConfig.maxValue && p.value > chartConfig.maxValue
+              : (p && chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color)),
+            pointBorderColor: plottedPoints.map(p => p && chartConfig.maxValue && p.value > chartConfig.maxValue
               ? chartConfig.cappedPointColor
-              : (chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color)),
+              : (p && chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color)),
             pointHoverRadius: 7,
             borderWidth: 4
           }]
@@ -988,7 +994,7 @@ async function showHistory(anchor, pin = false) {
             tooltip: chartConfig.maxValue ? {
               callbacks: {
                 label(context) {
-                  return Number(chartConfig.points[context.dataIndex].value).toLocaleString("cs-CZ");
+                  return Number(plottedPoints[context.dataIndex].value).toLocaleString("cs-CZ");
                 }
               }
             } : {},
@@ -996,10 +1002,23 @@ async function showHistory(anchor, pin = false) {
           },
           scales: {
             x: {
+              type: chartConfig.centerPointsInDay ? "linear" : "category",
+              min: chartConfig.centerPointsInDay ? -1 : undefined,
+              max: chartConfig.centerPointsInDay ? chartConfig.points.length - 1 : undefined,
               ticks: {
                 font: { size: 16 },
                 autoSkip: false,
-                callback(value, tickIndex, ticks) { return tickIndex % 3 === 0 || tickIndex === ticks.length - 1 ? this.getLabelForValue(value) : ""; }
+                stepSize: chartConfig.centerPointsInDay ? 1 : undefined,
+                callback(value, tickIndex, ticks) {
+                  if (chartConfig.centerPointsInDay) {
+                    const dayIndex = Number(value);
+                    if (!Number.isInteger(dayIndex) || dayIndex < 0 || dayIndex >= chartConfig.points.length) return "";
+                    return dayIndex % 3 === 0 || dayIndex === chartConfig.points.length - 1
+                      ? chartConfig.points[dayIndex].label
+                      : "";
+                  }
+                  return tickIndex % 3 === 0 || tickIndex === ticks.length - 1 ? this.getLabelForValue(value) : "";
+                }
               }
             },
             y: {
@@ -1015,7 +1034,8 @@ async function showHistory(anchor, pin = false) {
             }
           }
         }
-      }));
+        });
+      });
       positionHistoryPopup(anchor);
       return;
     }
