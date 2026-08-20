@@ -938,12 +938,14 @@ async function showHistory(anchor, pin = false) {
           redAt2300: true
         },
         {
-          title: "CZECH - Intely použité na sabotáže.",
+          title: "CZECH - Intely použité na sabotáže za posledních 30 dnů.",
           points: history.sabotageIntel,
           color: "#d3483e",
           fill: "rgba(211,72,62,.20)",
           greenRange: null,
-          redAt2300: false
+          redAt2300: false,
+          maxValue: 1600,
+          cappedPointColor: "#7b3fc6"
         }
       ];
       if (charts.some(chart => !chart.points.length)) {
@@ -961,14 +963,18 @@ async function showHistory(anchor, pin = false) {
         data: {
           labels: chartConfig.points.map(p => p.label),
           datasets: [{
-            data: chartConfig.points.map(p => p.value),
+            data: chartConfig.points.map(p => chartConfig.maxValue ? Math.min(p.value, chartConfig.maxValue) : p.value),
             borderColor: chartConfig.color,
             backgroundColor: chartConfig.fill,
             fill: true,
             tension: .25,
             pointRadius: chartConfig.points.length < 40 ? 4 : 0,
-            pointBackgroundColor: chartConfig.points.map(p => chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color),
-            pointBorderColor: chartConfig.points.map(p => chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color),
+            pointBackgroundColor: chartConfig.points.map(p => chartConfig.maxValue && p.value > chartConfig.maxValue
+              ? chartConfig.cappedPointColor
+              : (chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color)),
+            pointBorderColor: chartConfig.points.map(p => chartConfig.maxValue && p.value > chartConfig.maxValue
+              ? chartConfig.cappedPointColor
+              : (chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color)),
             pointHoverRadius: 7,
             borderWidth: 4
           }]
@@ -979,6 +985,13 @@ async function showHistory(anchor, pin = false) {
           interaction: { intersect: false, mode: "index" },
           plugins: {
             legend: { display: false },
+            tooltip: chartConfig.maxValue ? {
+              callbacks: {
+                label(context) {
+                  return Number(chartConfig.points[context.dataIndex].value).toLocaleString("cs-CZ");
+                }
+              }
+            } : {},
             weekendBackground: { days: chartConfig.points.map(p => p.dayOfWeek), greenRange: chartConfig.greenRange }
           },
           scales: {
@@ -989,7 +1002,17 @@ async function showHistory(anchor, pin = false) {
                 callback(value, tickIndex, ticks) { return tickIndex % 3 === 0 || tickIndex === ticks.length - 1 ? this.getLabelForValue(value) : ""; }
               }
             },
-            y: { ticks: { font: { size: 16 }, precision: 0 } }
+            y: {
+              max: chartConfig.maxValue,
+              ticks: {
+                font: { size: 16 },
+                precision: 0,
+                callback(value) {
+                  if (chartConfig.maxValue && Number(value) === chartConfig.maxValue) return "nad 1600";
+                  return Number(value).toLocaleString("cs-CZ");
+                }
+              }
+            }
           }
         }
       }));
