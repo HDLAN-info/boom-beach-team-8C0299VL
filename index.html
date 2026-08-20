@@ -237,9 +237,10 @@ html, body {
 .stat-history:hover, .stat-history:focus-visible { background: rgba(255,255,255,.35); transform: scale(1.03); outline: none; }
 .history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #f0e2bc; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
 .history-popup.visible { display: block; }
-.history-popup.team-wide { width: min(1640px, calc(100vw - 48px)); background: url("img/noise.png") repeat, #e0d5b3; }
+.history-popup.team-wide { width: min(1640px, calc(100vw - 48px)); height: min(950px, calc(100vh - 48px)); overflow-y: auto; background: url("img/noise.png") repeat, #e0d5b3; }
 .history-title { margin: 0 0 12px; font-size: 30px; line-height: 1.15; color: #1c2730; }
 .history-chart-wrap { height: 405px; }
+.team-history-section + .team-history-section { margin-top: 24px; }
 .history-message { height: 100%; display: flex; align-items: center; justify-content: center; font-size: 25px; color: #333; text-align: center; }
 .operations-popup { left: 50%; top: 50%; width: min(900px, calc(100vw - 48px)); height: 480px; transform: translate(-50%, -50%); text-align: center; background: url("img/noise.png") repeat, #e0d5b3; }
 .operations-content { display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; font-family: "Trebuchet MS", Arial, sans-serif; color: #fff; }
@@ -406,7 +407,7 @@ html, body {
 <div class="last-update">Poslední aktualizace: <span id="lastUpdateValue"></span></div>
 <div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
   <h2 id="historyTitle" class="history-title"></h2>
-  <div class="history-chart-wrap"><canvas></canvas></div>
+  <div id="historyContent"><div class="history-chart-wrap"><canvas></canvas></div></div>
 </div>
 <div id="operationsPopup" class="history-popup operations-popup" role="dialog" aria-modal="true" aria-labelledby="operationsTitle">
   <div class="operations-content">
@@ -775,6 +776,7 @@ window.addEventListener("touchmove", hidePopup);
 
 const historyPopup = document.getElementById("historyPopup");
 const historyTitle = document.getElementById("historyTitle");
+const historyContent = document.getElementById("historyContent");
 const historyCache = {};
 let historyChart = null, historyCloseTimer = null, historyPinned = false;
 const weekendBackgroundPlugin = {
@@ -843,9 +845,10 @@ function parseCzechDate(value) {
 function parseTeamIntelHistory(text) {
   const chartClock = new Date();
   chartClock.setHours(12, 0, 0, 0);
-  return text.trim().split(/\r?\n/).slice(1).map(parseCSVRow).map(columns => {
+  const rows = text.trim().split(/\r?\n/).slice(1).map(parseCSVRow);
+  const parseColumn = columnIndex => rows.map(columns => {
     const date = parseCzechDate(columns[1]);
-    const raw = clean(columns[7]);
+    const raw = clean(columns[columnIndex]);
     const value = Number(raw);
     if (!date || raw === "" || !Number.isFinite(value)) return null;
     const daysAgo = Math.round((chartClock - date) / 86400000);
@@ -856,6 +859,10 @@ function parseTeamIntelHistory(text) {
       dayOfWeek: date.getDay()
     };
   }).filter(Boolean).slice(-30);
+  return {
+    teamIntel: parseColumn(7),
+    sabotageIntel: parseColumn(4)
+  };
 }
 async function loadHistory(kind) {
   if (!historyCache[kind]) {
@@ -870,7 +877,7 @@ async function loadHistory(kind) {
 }
 
 function positionHistoryPopup(anchor) {
-  const rect = anchor.getBoundingClientRect(), width = historyPopup.getBoundingClientRect().width, height = 500;
+  const rect = anchor.getBoundingClientRect(), width = historyPopup.getBoundingClientRect().width, height = historyPopup.getBoundingClientRect().height;
   let left = rect.right + 18;
   if (left + width > window.innerWidth - 24) left = rect.left - width - 18;
   historyPopup.style.left = `${Math.max(24, Math.min(left, window.innerWidth - width - 24))}px`;
@@ -879,17 +886,91 @@ function positionHistoryPopup(anchor) {
 
 async function showHistory(anchor, pin = false) {
   clearTimeout(historyCloseTimer); historyPinned = pin;
-  const kind = anchor.dataset.kind, wrap = historyPopup.querySelector(".history-chart-wrap");
+  const kind = anchor.dataset.kind;
   historyPopup.classList.toggle("team-wide", kind === "team_intel");
   historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
-  historyTitle.textContent = kind === "team_intel" ? "CZECH - Stav intelů při ukončení TaskForce OP za posledních 30 dnů." : `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
-  wrap.innerHTML = '<div class="history-message">Načítám historii…</div>';
+  historyTitle.hidden = kind === "team_intel";
+  historyTitle.textContent = kind === "team_intel" ? "" : `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
+  historyContent.innerHTML = '<div class="history-chart-wrap"><div class="history-message">Načítám historii…</div></div>';
+  const wrap = historyContent.querySelector(".history-chart-wrap");
   try {
     const history = await loadHistory(kind);
-    const points = kind === "team_intel" ? history : history.get(anchor.dataset.tag.toUpperCase()) || [];
+    if (kind === "team_intel") {
+      const charts = [
+        {
+          title: "CZECH - Stav intelů při ukončení TaskForce OP za posledních 30 dnů.",
+          points: history.teamIntel,
+          color: "#1687c4",
+          fill: "rgba(22,135,196,.18)",
+          greenRange: { min: 1800, max: 2200 },
+          redAt2300: true
+        },
+        {
+          title: "CZECH - Intely použité na sabotáže.",
+          points: history.sabotageIntel,
+          color: "#65a9d1",
+          fill: "rgba(101,169,209,.20)",
+          greenRange: null,
+          redAt2300: false
+        }
+      ];
+      if (charts.some(chart => !chart.points.length)) {
+        wrap.innerHTML = '<div class="history-message">Pro tým zatím není historie k dispozici.</div>';
+        return;
+      }
+      historyContent.innerHTML = `<div class="team-history-charts">${charts.map((chart, index) => `<section class="team-history-section"><h2 class="history-title">${chart.title}</h2><div class="history-chart-wrap"><canvas data-chart-index="${index}"></canvas></div></section>`).join("")}</div>`;
+      if (historyChart) {
+        const chartList = Array.isArray(historyChart) ? historyChart : [historyChart];
+        chartList.forEach(chart => chart.destroy());
+      }
+      historyChart = charts.map((chartConfig, index) => new Chart(historyPopup.querySelector(`canvas[data-chart-index="${index}"]`), {
+        type: "line",
+        plugins: [weekendBackgroundPlugin],
+        data: {
+          labels: chartConfig.points.map(p => p.label),
+          datasets: [{
+            data: chartConfig.points.map(p => p.value),
+            borderColor: chartConfig.color,
+            backgroundColor: chartConfig.fill,
+            fill: true,
+            tension: .25,
+            pointRadius: chartConfig.points.length < 40 ? 4 : 0,
+            pointBackgroundColor: chartConfig.points.map(p => chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color),
+            pointBorderColor: chartConfig.points.map(p => chartConfig.redAt2300 && p.value === 2300 ? "#d62828" : chartConfig.color),
+            pointHoverRadius: 7,
+            borderWidth: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { intersect: false, mode: "index" },
+          plugins: {
+            legend: { display: false },
+            weekendBackground: { days: chartConfig.points.map(p => p.dayOfWeek), greenRange: chartConfig.greenRange }
+          },
+          scales: {
+            x: {
+              ticks: {
+                font: { size: 16 },
+                autoSkip: false,
+                callback(value, tickIndex, ticks) { return tickIndex % 3 === 0 || tickIndex === ticks.length - 1 ? this.getLabelForValue(value) : ""; }
+              }
+            },
+            y: { ticks: { font: { size: 16 }, precision: 0 } }
+          }
+        }
+      }));
+      positionHistoryPopup(anchor);
+      return;
+    }
+    const points = history.get(anchor.dataset.tag.toUpperCase()) || [];
     if (!points.length) { wrap.innerHTML = '<div class="history-message">Pro tohoto hráče zatím není historie k dispozici.</div>'; return; }
     wrap.innerHTML = '<canvas></canvas>';
-    if (historyChart) historyChart.destroy();
+    if (historyChart) {
+      const chartList = Array.isArray(historyChart) ? historyChart : [historyChart];
+      chartList.forEach(chart => chart.destroy());
+    }
     historyChart = new Chart(wrap.querySelector("canvas"), {
       type: "line",
       plugins: [weekendBackgroundPlugin],
