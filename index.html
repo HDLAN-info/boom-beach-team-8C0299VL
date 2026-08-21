@@ -235,7 +235,7 @@ html, body {
 
 .stat-history { cursor: pointer; border-radius: 12px; transition: background-color .15s ease, transform .15s ease; user-select: none; }
 .stat-history:hover, .stat-history:focus-visible { background: rgba(255,255,255,.35); transform: scale(1.03); outline: none; }
-.history-popup { position: fixed; width: min(820px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #f0e2bc; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
+.history-popup { position: fixed; width: min(1066px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #f0e2bc; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
 .history-popup.visible { display: block; }
 .history-popup.team-wide {
   width: min(1640px, calc(100vw - 32px));
@@ -250,6 +250,7 @@ html, body {
 }
 .history-title { margin: 0 0 12px; font-size: 30px; line-height: 1.15; color: #1c2730; }
 .history-chart-wrap { height: 405px; }
+.history-change { position: absolute; top: 22px; right: 26px; max-width: 52%; z-index: 2; color: #1c2730; font-size: 30px; font-weight: 700; line-height: 1.15; text-align: right; pointer-events: none; }
 .team-wide #historyContent,
 .team-history-charts { height: 100%; min-height: 0; }
 .team-history-charts { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -918,6 +919,7 @@ function positionHistoryPopup(anchor) {
 async function showHistory(anchor, pin = false) {
   clearTimeout(historyCloseTimer); historyPinned = pin;
   const kind = anchor.dataset.kind;
+  historyPopup.querySelector(".history-change")?.remove();
   historyPopup.classList.toggle("team-wide", kind === "team_intel");
   historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
   historyTitle.hidden = kind === "team_intel";
@@ -1042,6 +1044,17 @@ async function showHistory(anchor, pin = false) {
     const points = history.get(anchor.dataset.tag.toUpperCase()) || [];
     if (!points.length) { wrap.innerHTML = '<div class="history-message">Pro tohoto hráče zatím není historie k dispozici.</div>'; return; }
     wrap.innerHTML = '<canvas></canvas>';
+    if (kind === "vp") {
+      const difference = points[points.length - 1].value - points[0].value;
+      const change = document.createElement("div");
+      change.className = "history-change";
+      change.textContent = difference > 0
+        ? `Růst o ${difference.toLocaleString("cs-CZ")} VP`
+        : difference < 0
+          ? `Pokles o ${Math.abs(difference).toLocaleString("cs-CZ")} VP`
+          : "Změna o 0 VP";
+      historyPopup.appendChild(change);
+    }
     if (historyChart) {
       const chartList = Array.isArray(historyChart) ? historyChart : [historyChart];
       chartList.forEach(chart => chart.destroy());
