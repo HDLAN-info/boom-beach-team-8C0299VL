@@ -1002,6 +1002,10 @@ async function showHistory(anchor, pin = false) {
               titleFont: { size: 24 },
               bodyFont: { size: 24 },
               callbacks: chartConfig.maxValue ? {
+                title(items) {
+                  if (!items.length) return "";
+                  return plottedPoints[items[0].dataIndex].label;
+                },
                 label(context) {
                   return Number(plottedPoints[context.dataIndex].value).toLocaleString("cs-CZ");
                 }
