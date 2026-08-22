@@ -891,9 +891,14 @@ function parseTeamIntelHistory(text) {
       dayOfWeek: date.getDay()
     };
   }).filter(Boolean).slice(-30);
+  const sabotageIntel = parseColumn(4);
+  sabotageIntel.forEach((point, index) => {
+    const daysAgo = sabotageIntel.length - index;
+    point.label = daysAgo === 1 ? "Včera" : `${daysAgo} d.`;
+  });
   return {
     teamIntel: parseColumn(7),
-    sabotageIntel: parseColumn(4)
+    sabotageIntel
   };
 }
 async function loadHistory(kind) {
@@ -1008,7 +1013,7 @@ async function showHistory(anchor, pin = false) {
               min: chartConfig.centerPointsInDay ? -1 : undefined,
               max: chartConfig.centerPointsInDay ? chartConfig.points.length - 1 : undefined,
               ticks: {
-                font: { size: 16 },
+                font: { size: 32 },
                 autoSkip: false,
                 stepSize: chartConfig.centerPointsInDay ? 1 : undefined,
                 callback(value, tickIndex, ticks) {
@@ -1091,7 +1096,7 @@ async function showHistory(anchor, pin = false) {
         scales: {
           x: {
             ticks: {
-              font: { size: 16 },
+              font: { size: 32 },
               autoSkip: false,
               callback(value, index, ticks) {
                 return index % 3 === 0 || index === ticks.length - 1 ? this.getLabelForValue(value) : "";
