@@ -950,7 +950,7 @@ async function showHistory(anchor, pin = false) {
           fill: "rgba(211,72,62,.20)",
           greenRange: null,
           redAt2300: false,
-          maxValue: 1600,
+          maxValue: 1400,
           cappedPointColor: "#7b3fc6",
           centerPointsInDay: true
         }
@@ -1040,7 +1040,7 @@ async function showHistory(anchor, pin = false) {
                 font: { size: 16 },
                 precision: 0,
                 callback(value) {
-                  if (chartConfig.maxValue && Number(value) === chartConfig.maxValue) return "nad 1600";
+                  if (chartConfig.maxValue && Number(value) === chartConfig.maxValue) return `nad ${chartConfig.maxValue}`;
                   return Number(value).toLocaleString("cs-CZ");
                 }
               }
