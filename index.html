@@ -402,6 +402,7 @@ html, body {
 .team-info-entry { top: 72.9%; width: 3.25%; height: 6.7%; }
 .team-info-type { top: 84.3%; width: 5.45%; height: 6.7%; }
 .last-update {
+  position: relative;
   width: 2100px;
   box-sizing: border-box;
   padding: 4px 20px 24px;
@@ -417,6 +418,83 @@ html, body {
      2px  2px 0 #000,
      0 5px 0 rgba(0,0,0,0.6);
 }
+.info-icon {
+  position: absolute;
+  bottom: 6px;
+  right: 20px;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  cursor: pointer;
+  border-radius: 50%;
+}
+.info-icon:focus-visible {
+  outline: 5px solid #fff;
+  outline-offset: 4px;
+}
+.help-tour[hidden] { display: none; }
+.help-tour-guard,
+.help-tour-spotlight,
+.help-tour-bubble { position: fixed; }
+.help-tour-guard { inset: 0; z-index: 20000; }
+.help-tour-spotlight {
+  z-index: 20001;
+  pointer-events: none;
+  border: 5px solid #65d8ff;
+  border-radius: 18px;
+  box-shadow: 0 0 0 9999px rgba(0, 12, 24, .67), 0 0 28px 8px rgba(64, 207, 255, .9);
+  transition: left .22s ease, top .22s ease, width .22s ease, height .22s ease;
+}
+.help-tour-bubble {
+  z-index: 20002;
+  width: min(680px, calc(100vw - 40px));
+  box-sizing: border-box;
+  padding: 24px 28px 22px;
+  color: #1c2730;
+  background: url("img/noise.png") repeat, #f0e2bc;
+  border: 4px solid rgba(43,95,143,.9);
+  border-radius: 20px;
+  box-shadow: 0 16px 45px rgba(0,0,0,.55), inset 0 2px 0 #fff5d8;
+  font-family: "Trebuchet MS", Arial, sans-serif;
+}
+.help-tour-progress { margin-bottom: 6px; color: #2679a8; font-size: 22px; font-weight: 900; text-align: right; }
+.help-tour-title { margin: 0 0 12px; font-size: 34px; line-height: 1.1; }
+.help-tour-text { font-size: 27px; font-weight: 600; line-height: 1.28; }
+.help-tour-text p { margin: 0; }
+.help-level-legend { display: flex; gap: 28px; margin-top: 18px; }
+.help-level-item { display: flex; align-items: center; gap: 10px; }
+.help-level-dot {
+  display: inline-flex;
+  width: 54px;
+  height: 54px;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  border: 3px solid #17618e;
+  border-radius: 50%;
+  color: #fff;
+  background: #52aee0;
+  font-size: 24px;
+  font-weight: 900;
+  text-shadow: 1px 1px 2px #000;
+}
+.help-level-dot.absent { border-color: #298a51; background: #66d891; }
+.help-tour-actions { display: flex; justify-content: space-between; gap: 14px; margin-top: 22px; }
+.help-tour-button {
+  min-width: 150px;
+  padding: 11px 18px;
+  border: 3px solid #fff;
+  border-radius: 12px;
+  color: #fff;
+  background: #1687c4;
+  box-shadow: 0 4px 0 rgba(0,0,0,.28);
+  font: 900 24px/1 "Trebuchet MS", Arial, sans-serif;
+  cursor: pointer;
+}
+.help-tour-button:hover, .help-tour-button:focus-visible { background: #0d6faa; outline: none; }
+.help-tour-button:disabled { visibility: hidden; }
+.help-tour-button.close { background: #8b5b35; }
+.help-tour-button.close:hover, .help-tour-button.close:focus-visible { background: #6d4326; }
 </style>
   
 </head>
@@ -437,7 +515,21 @@ html, body {
   <span class="team-info-value team-info-type" data-team-info="type">Closed</span>
 </div>
 <div id="team">Načítám…</div>
-<div class="last-update">Poslední aktualizace: <span id="lastUpdateValue"></span></div>
+<div class="last-update">Poslední aktualizace: <span id="lastUpdateValue"></span><img id="helpButton" class="info-icon" src="img/info.png" alt="Otevřít nápovědu" role="button" tabindex="0"></div>
+<div id="helpTour" class="help-tour" hidden>
+  <div class="help-tour-guard"></div>
+  <div id="helpTourSpotlight" class="help-tour-spotlight"></div>
+  <section id="helpTourBubble" class="help-tour-bubble" role="dialog" aria-modal="true" aria-labelledby="helpTourTitle">
+    <div id="helpTourProgress" class="help-tour-progress"></div>
+    <h2 id="helpTourTitle" class="help-tour-title"></h2>
+    <div id="helpTourText" class="help-tour-text"></div>
+    <div class="help-tour-actions">
+      <button id="helpTourPrev" class="help-tour-button" type="button">ZPĚT</button>
+      <button id="helpTourClose" class="help-tour-button close" type="button">UKONČIT</button>
+      <button id="helpTourNext" class="help-tour-button" type="button">DALŠÍ</button>
+    </div>
+  </section>
+</div>
 <div id="historyPopup" class="history-popup" role="dialog" aria-modal="false" aria-labelledby="historyTitle">
   <h2 id="historyTitle" class="history-title"></h2>
   <div id="historyContent"><div class="history-chart-wrap"><canvas></canvas></div></div>
@@ -1269,6 +1361,153 @@ document.addEventListener("click", event => {
   if (!event.target.closest("#operationsPopup") && !event.target.closest("#operationsButton")) closeOperations();
 });
 document.addEventListener("keydown", event => { if (event.key === "Escape") closeOperations(); });
+
+const helpButton = document.getElementById("helpButton");
+const helpTour = document.getElementById("helpTour");
+const helpTourSpotlight = document.getElementById("helpTourSpotlight");
+const helpTourBubble = document.getElementById("helpTourBubble");
+const helpTourProgress = document.getElementById("helpTourProgress");
+const helpTourTitle = document.getElementById("helpTourTitle");
+const helpTourText = document.getElementById("helpTourText");
+const helpTourPrev = document.getElementById("helpTourPrev");
+const helpTourNext = document.getElementById("helpTourNext");
+const helpTourClose = document.getElementById("helpTourClose");
+let helpTourIndex = 0;
+let helpTourTarget = null;
+let helpStartScroll = { x: 0, y: 0 };
+
+const helpTourSteps = [
+  {
+    title: "Týmové intely",
+    text: "Klepnutím nebo přejetím myší nad hodnotou týmových intelů zobrazíte dva grafy za posledních 30 dnů: stav intelů při ukončení operace a počet intelů použitých na sabotáže.",
+    selector: '[data-kind="team_intel"]',
+    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+  },
+  {
+    title: "Level hráče",
+    text: `Modrý kruh označuje aktivního hráče. Zelený kruh znamená, že hráč předem oznámil svou dočasnou neúčast.
+      <div class="help-level-legend">
+        <span class="help-level-item"><span class="help-level-dot">87</span> Aktivní hráč</span>
+        <span class="help-level-item"><span class="help-level-dot absent">87</span> Oznámená neúčast</span>
+      </div>`,
+    selector: ".level"
+  },
+  {
+    title: "Jméno hráče",
+    text: "Klepnutím nebo přejetím myší nad jménem hráče zobrazíte jeho další herní účty, pokud jsou evidovány.",
+    selector: '.account-name[data-accounts]:not([data-accounts=""])',
+    prepare(anchor) { showAccounts(anchor); return popup || anchor; }
+  },
+  {
+    title: "QR kód",
+    text: "QR kód otevře profil hráče v Boom Beach a lze jej pak přidat mezi Boom Beach přítele. Lze jej také naskenovat fotoaparátem jiného zařízení.",
+    selector: ".qr"
+  },
+  {
+    title: "VP hráče",
+    text: "Klepnutím nebo přejetím myší nad hodnotou VP zobrazíte vývoj vítězných bodů za posledních 30 dnů. Vpravo nahoře uvidíte celkový růst nebo pokles za zobrazené období.",
+    selector: '[data-kind="vp"]',
+    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+  },
+  {
+    title: "Intely hráče",
+    text: "Klepnutím nebo přejetím myší nad hodnotou intelů zobrazíte jejich vývoj za posledních 30 dnů. Svislý sobotní pokles na nulu znázorňuje pravidelný týdenní reset.",
+    selector: '[data-kind="intel"]',
+    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+  },
+  {
+    title: "Víkendové barvy v grafech",
+    text: "Žluté podbarvení označuje sobotu a červené neděli. Zelené vodorovné pásmo v týmovém grafu zvýrazňuje doporučené rozmezí intelů.",
+    selector: '[data-kind="intel"]',
+    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+  },
+  {
+    title: "Tlačítka v záhlaví",
+    text: "V záhlaví můžete vstoupit do týmu, zobrazit čas příští operace, prohlédnout diplomy a otevřít statistiky Task Force.",
+    selector: ".team-header"
+  }
+];
+
+function clearHelpExamples() {
+  closeHistory(true);
+  closeOperations();
+  hidePopup();
+}
+
+function positionHelpTour(target) {
+  if (!target || helpTour.hidden) return;
+  const rect = target.getBoundingClientRect();
+  const padding = 10;
+  const left = Math.max(8, rect.left - padding);
+  const top = Math.max(8, rect.top - padding);
+  const right = Math.min(window.innerWidth - 8, rect.right + padding);
+  const bottom = Math.min(window.innerHeight - 8, rect.bottom + padding);
+  helpTourSpotlight.style.left = `${left}px`;
+  helpTourSpotlight.style.top = `${top}px`;
+  helpTourSpotlight.style.width = `${Math.max(20, right - left)}px`;
+  helpTourSpotlight.style.height = `${Math.max(20, bottom - top)}px`;
+
+  const bubbleRect = helpTourBubble.getBoundingClientRect();
+  const gap = 22;
+  let bubbleLeft = rect.right + gap;
+  let bubbleTop = rect.top;
+  if (bubbleLeft + bubbleRect.width > window.innerWidth - 20) bubbleLeft = rect.left - bubbleRect.width - gap;
+  if (bubbleLeft < 20) bubbleLeft = Math.max(20, Math.min(window.innerWidth - bubbleRect.width - 20, rect.left + rect.width / 2 - bubbleRect.width / 2));
+  if (bubbleTop + bubbleRect.height > window.innerHeight - 20) bubbleTop = rect.top - bubbleRect.height - gap;
+  if (bubbleTop < 20) bubbleTop = Math.max(20, window.innerHeight - bubbleRect.height - 20);
+  helpTourBubble.style.left = `${bubbleLeft}px`;
+  helpTourBubble.style.top = `${bubbleTop}px`;
+}
+
+async function showHelpTourStep(index) {
+  helpTourIndex = Math.max(0, Math.min(index, helpTourSteps.length - 1));
+  clearHelpExamples();
+  const step = helpTourSteps[helpTourIndex];
+  const anchor = document.querySelector(step.selector) || document.querySelector(".team-header");
+  anchor.scrollIntoView({ block: "center", inline: "center" });
+  await new Promise(resolve => setTimeout(resolve, 180));
+  helpTourTarget = step.prepare ? await step.prepare(anchor) : anchor;
+  helpTourProgress.textContent = `${helpTourIndex + 1} / ${helpTourSteps.length}`;
+  helpTourTitle.textContent = step.title;
+  helpTourText.innerHTML = `<p>${step.text}</p>`;
+  helpTourPrev.disabled = helpTourIndex === 0;
+  helpTourNext.textContent = helpTourIndex === helpTourSteps.length - 1 ? "HOTOVO" : "DALŠÍ";
+  positionHelpTour(helpTourTarget);
+  helpTourNext.focus({ preventScroll: true });
+}
+
+async function openHelpTour() {
+  helpStartScroll = { x: window.scrollX, y: window.scrollY };
+  helpTour.hidden = false;
+  await showHelpTourStep(0);
+}
+
+function closeHelpTour() {
+  if (helpTour.hidden) return;
+  helpTour.hidden = true;
+  clearHelpExamples();
+  window.scrollTo(helpStartScroll.x, helpStartScroll.y);
+  helpButton.focus({ preventScroll: true });
+}
+
+helpButton.addEventListener("click", event => { event.stopPropagation(); openHelpTour(); });
+helpButton.addEventListener("keydown", event => {
+  if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openHelpTour(); }
+});
+helpTourBubble.addEventListener("click", event => event.stopPropagation());
+helpTourPrev.addEventListener("click", () => showHelpTourStep(helpTourIndex - 1));
+helpTourNext.addEventListener("click", () => {
+  if (helpTourIndex === helpTourSteps.length - 1) closeHelpTour();
+  else showHelpTourStep(helpTourIndex + 1);
+});
+helpTourClose.addEventListener("click", closeHelpTour);
+document.addEventListener("keydown", event => {
+  if (helpTour.hidden) return;
+  if (event.key === "Escape") closeHelpTour();
+  if (event.key === "ArrowRight") showHelpTourStep(helpTourIndex + 1);
+  if (event.key === "ArrowLeft") showHelpTourStep(helpTourIndex - 1);
+});
+window.addEventListener("resize", () => positionHelpTour(helpTourTarget));
 </script>
 
 </body>
