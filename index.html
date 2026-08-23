@@ -461,6 +461,7 @@ html, body {
 .help-tour-title { margin: 0 0 12px; font-size: 34px; line-height: 1.1; }
 .help-tour-text { font-size: 27px; font-weight: 600; line-height: 1.28; }
 .help-tour-text p { margin: 0; }
+.help-tour-text a { color: #0879bd; font-weight: 900; text-decoration: underline; }
 .help-level-legend { display: flex; gap: 28px; margin-top: 18px; }
 .help-level-item { display: flex; align-items: center; gap: 10px; }
 .help-level-dot {
@@ -1379,9 +1380,9 @@ let helpStartScroll = { x: 0, y: 0 };
 const helpTourSteps = [
   {
     title: "Týmové intely",
-    text: "Klepnutím nebo přejetím myší nad hodnotou týmových intelů zobrazíte dva grafy za posledních 30 dnů: stav intelů při ukončení operace a počet intelů použitých na sabotáže. Žluté podbarvení označuje sobotu a červené neděli. Zelené vodorovné pásmo v týmovém grafu zvýrazňuje doporučené rozmezí intelů.",
+    text: "Klepnutím nebo přejetím myší nad hodnotou týmových intelů zobrazíte dva grafy za posledních 30 dnů: stav intelů při ukončení operace a počet intelů použitých na sabotáže. Žluté podbarvení označuje sobotu a červené neděli. Zelené vodorovné pásmo v týmovém grafu zvýrazňuje doporučené rozmezí intelů. Klepnutím na libovolný bod zobrazíte v malém okénku příslušný den a přesnou hodnotu.",
     selector: '[data-kind="team_intel"]',
-    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+    async prepare(anchor) { await showHistory(anchor, true); showRandomChartTooltips(); return historyPopup; }
   },
   {
     title: "Level hráče",
@@ -1390,7 +1391,8 @@ const helpTourSteps = [
         <span class="help-level-item"><span class="help-level-dot">87</span> Aktivní hráč</span>
         <span class="help-level-item"><span class="help-level-dot absent">87</span> Oznámená neúčast</span>
       </div>`,
-    selector: ".level"
+    selector: ".level",
+    random: true
   },
   {
     title: "Jméno hráče",
@@ -1400,20 +1402,29 @@ const helpTourSteps = [
   },
   {
     title: "QR kód",
-    text: "QR kód otevře profil hráče v Boom Beach a lze jej pak přidat mezi Boom Beach přátele. Lze jej také naskenovat fotoaparátem jiného zařízení.",
-    selector: ".qr"
+    text: "QR kód otevře profil hráče v Boom Beach a lze jej pak přidat mezi Boom Beach přátele. Lze jej také naskenovat fotoaparátem jiného zařízení. QR kód se aktivuje také ťuknutím přímo na QR kód.",
+    selector: ".qr",
+    random: true
+  },
+  {
+    title: "Ikona Session",
+    text: "Ikona „S“ u jména hráče znamená, že je členem týmového chatu v aplikaci Session. K týmové skupině je možné se připojit také kliknutím <a href=\"https://boombeach.cz/session\" target=\"_blank\" rel=\"noopener\">ZDE</a>.",
+    selector: ".session-icon.active",
+    random: true
   },
   {
     title: "VP hráče",
-    text: "Klepnutím nebo přejetím myší nad hodnotou VP zobrazíte vývoj vítězných bodů za posledních 30 dnů. Vpravo nahoře uvidíte celkový růst nebo pokles za zobrazené období.",
+    text: "Klepnutím nebo přejetím myší nad hodnotou VP zobrazíte vývoj vítězných bodů za posledních 30 dnů. Vpravo nahoře uvidíte celkový růst nebo pokles za zobrazené období. Klepnutím na bod zobrazíte v malém okénku příslušný den a přesnou hodnotu VP.",
     selector: '[data-kind="vp"]',
-    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+    random: true,
+    async prepare(anchor) { await showHistory(anchor, true); showRandomChartTooltips(); return historyPopup; }
   },
   {
     title: "Intely hráče",
-    text: "Klepnutím nebo přejetím myší nad hodnotou intelů zobrazíte jejich vývoj za posledních 30 dnů. Svislý sobotní pokles na nulu znázorňuje pravidelný týdenní reset.",
+    text: "Klepnutím nebo přejetím myší nad hodnotou intelů zobrazíte jejich vývoj za posledních 30 dnů. Svislý sobotní pokles na nulu znázorňuje pravidelný týdenní reset. Klepnutím na bod zobrazíte v malém okénku příslušný den a přesný počet intelů.",
     selector: '[data-kind="intel"]',
-    async prepare(anchor) { await showHistory(anchor, true); return historyPopup; }
+    random: true,
+    async prepare(anchor) { await showHistory(anchor, true); showRandomChartTooltips(); return historyPopup; }
   },
   {
     title: "Tlačítka v záhlaví",
@@ -1421,6 +1432,44 @@ const helpTourSteps = [
     selector: ".team-header"
   }
 ];
+
+function randomHelpElement(selector) {
+  const elements = [...document.querySelectorAll(selector)].filter(element => element.getClientRects().length);
+  return elements.length ? elements[Math.floor(Math.random() * elements.length)] : null;
+}
+
+    function showRandomChartTooltips() {
+      const charts = (Array.isArray(historyChart) ? historyChart : [historyChart]).filter(Boolean);
+      charts.forEach(chart => {
+        const candidates = [];
+        chart.data.datasets.forEach((dataset, datasetIndex) => {
+          dataset.data.forEach((point, index) => {
+            const value = typeof point === "number" ? point : Number(point?.y);
+            const element = chart.getDatasetMeta(datasetIndex).data[index];
+            if (Number.isFinite(value) && value > 0 && element) {
+              candidates.push({ datasetIndex, index, element });
+            }
+          });
+        });
+        if (!candidates.length) return;
+        const chartWidth = chart.chartArea.right - chart.chartArea.left;
+        const edgeCandidates = candidates.filter(({ element }) => {
+          const relativeX = (element.x - chart.chartArea.left) / chartWidth;
+          return relativeX < 0.28 || relativeX > 0.72;
+        });
+        const visibleCandidates = edgeCandidates.length ? edgeCandidates : candidates;
+        const activePoint = visibleCandidates[Math.floor(Math.random() * visibleCandidates.length)];
+        const { element } = activePoint;
+        chart.setActiveElements([activePoint]);
+        chart.tooltip?.setActiveElements([activePoint], { x: element.x, y: element.y });
+        chart.update();
+      });
+}
+
+function blockHelpTourScroll(event) {
+  if (helpTour.hidden) return;
+  event.preventDefault();
+}
 
 function clearHelpExamples() {
   closeHistory(true);
@@ -1457,7 +1506,7 @@ async function showHelpTourStep(index) {
   helpTourIndex = Math.max(0, Math.min(index, helpTourSteps.length - 1));
   clearHelpExamples();
   const step = helpTourSteps[helpTourIndex];
-  const anchor = document.querySelector(step.selector) || document.querySelector(".team-header");
+  const anchor = (step.random ? randomHelpElement(step.selector) : document.querySelector(step.selector)) || document.querySelector(".team-header");
   anchor.scrollIntoView({ block: "center", inline: "center" });
   await new Promise(resolve => setTimeout(resolve, 180));
   helpTourTarget = step.prepare ? await step.prepare(anchor) : anchor;
@@ -1465,9 +1514,11 @@ async function showHelpTourStep(index) {
   helpTourTitle.textContent = step.title;
   helpTourText.innerHTML = `<p>${step.text}</p>`;
   helpTourPrev.disabled = helpTourIndex === 0;
-  helpTourNext.textContent = helpTourIndex === helpTourSteps.length - 1 ? "HOTOVO" : "DALŠÍ";
+  const isLastHelpStep = helpTourIndex === helpTourSteps.length - 1;
+  helpTourNext.hidden = isLastHelpStep;
+  helpTourNext.textContent = "DALŠÍ";
   positionHelpTour(helpTourTarget);
-  helpTourNext.focus({ preventScroll: true });
+  (isLastHelpStep ? helpTourClose : helpTourNext).focus({ preventScroll: true });
 }
 
 async function openHelpTour() {
@@ -1497,10 +1548,13 @@ helpTourNext.addEventListener("click", () => {
 helpTourClose.addEventListener("click", closeHelpTour);
 document.addEventListener("keydown", event => {
   if (helpTour.hidden) return;
-  if (event.key === "Escape") closeHelpTour();
-  if (event.key === "ArrowRight") showHelpTourStep(helpTourIndex + 1);
-  if (event.key === "ArrowLeft") showHelpTourStep(helpTourIndex - 1);
+  if (event.key === "Escape") { event.preventDefault(); closeHelpTour(); return; }
+  if (event.key === "ArrowRight") { event.preventDefault(); showHelpTourStep(helpTourIndex + 1); return; }
+  if (event.key === "ArrowLeft") { event.preventDefault(); showHelpTourStep(helpTourIndex - 1); return; }
+  if (!event.target.closest?.(".help-tour-bubble") && ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(event.key)) event.preventDefault();
 });
+window.addEventListener("wheel", blockHelpTourScroll, { passive: false });
+window.addEventListener("touchmove", blockHelpTourScroll, { passive: false });
 window.addEventListener("resize", () => positionHelpTour(helpTourTarget));
 </script>
 
