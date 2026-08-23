@@ -1515,7 +1515,8 @@ async function showHelpTourStep(index) {
   helpTourText.innerHTML = `<p>${step.text}</p>`;
   helpTourPrev.disabled = helpTourIndex === 0;
   const isLastHelpStep = helpTourIndex === helpTourSteps.length - 1;
-  helpTourNext.hidden = isLastHelpStep;
+  helpTourNext.hidden = false;
+  helpTourNext.disabled = isLastHelpStep;
   helpTourNext.textContent = "DALŠÍ";
   positionHelpTour(helpTourTarget);
   (isLastHelpStep ? helpTourClose : helpTourNext).focus({ preventScroll: true });
@@ -1540,6 +1541,11 @@ helpButton.addEventListener("keydown", event => {
   if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openHelpTour(); }
 });
 helpTourBubble.addEventListener("click", event => event.stopPropagation());
+document.addEventListener("click", event => {
+  if (helpTour.hidden || event.target.closest?.(".help-tour-bubble")) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
 helpTourPrev.addEventListener("click", () => showHelpTourStep(helpTourIndex - 1));
 helpTourNext.addEventListener("click", () => {
   if (helpTourIndex === helpTourSteps.length - 1) closeHelpTour();
