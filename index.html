@@ -1070,28 +1070,60 @@ async function showHistory(anchor, pin = false) {
       const chartList = Array.isArray(historyChart) ? historyChart : [historyChart];
       chartList.forEach(chart => chart.destroy());
     }
+    const playerDatasets = [];
+    if (kind === "intel") {
+      const curvedRuns = [];
+      const resetSegments = [];
+      let currentRun = [];
+      points.forEach(point => {
+        const chartPoint = { x: point.label, y: point.value };
+        currentRun.push(chartPoint);
+        if (point.dayOfWeek === 6) {
+          const resetPoint = { x: point.label, y: 0 };
+          curvedRuns.push(currentRun);
+          resetSegments.push([chartPoint, resetPoint]);
+          currentRun = [resetPoint];
+        }
+      });
+      if (currentRun.length > 1 || !curvedRuns.length) curvedRuns.push(currentRun);
+      const intelDataset = (data, reset = false) => ({
+        data,
+        borderColor: "#1687c4",
+        backgroundColor: "rgba(22,135,196,.18)",
+        fill: !reset,
+        tension: reset ? 0 : .25,
+        pointRadius: points.length < 40 ? 4 : 0,
+        pointBackgroundColor: "#1687c4",
+        pointBorderColor: "#1687c4",
+        pointHoverRadius: 7,
+        borderWidth: 4
+      });
+      playerDatasets.push(...curvedRuns.map(run => intelDataset(run)), ...resetSegments.map(segment => intelDataset(segment, true)));
+    } else {
+      playerDatasets.push({
+        data: points.map(p => p.value),
+        borderColor: "#d59b00",
+        backgroundColor: "rgba(213,155,0,.18)",
+        fill: true,
+        tension: .25,
+        pointRadius: points.length < 40 ? 4 : 0,
+        pointBackgroundColor: "#d59b00",
+        pointBorderColor: "#d59b00",
+        pointHoverRadius: 7,
+        borderWidth: 4
+      });
+    }
     historyChart = new Chart(wrap.querySelector("canvas"), {
       type: "line",
       plugins: [weekendBackgroundPlugin],
       data: {
         labels: points.map(p => p.label),
-        datasets: [{
-          data: points.map(p => p.value),
-          borderColor: kind === "vp" ? "#d59b00" : "#1687c4",
-          backgroundColor: kind === "vp" ? "rgba(213,155,0,.18)" : "rgba(22,135,196,.18)",
-          fill: true,
-          tension: .25,
-          pointRadius: points.length < 40 ? 4 : 0,
-          pointBackgroundColor: points.map(p => kind === "team_intel" && p.value === 2300 ? "#d62828" : (kind === "vp" ? "#d59b00" : "#1687c4")),
-          pointBorderColor: points.map(p => kind === "team_intel" && p.value === 2300 ? "#d62828" : (kind === "vp" ? "#d59b00" : "#1687c4")),
-          pointHoverRadius: 7,
-          borderWidth: 4
-        }]
+        datasets: playerDatasets
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { intersect: false, mode: "index" },
+        interaction: { intersect: false, mode: kind === "intel" ? "nearest" : "index" },
         plugins: {
           legend: { display: false },
           tooltip: {
