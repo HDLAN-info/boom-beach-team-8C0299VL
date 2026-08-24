@@ -857,11 +857,11 @@ function autoShrinkNames() {
 
 // 👇 popup kód je MIMO funkci
 
-let popup = null, popupCloseTimer = null;
+let popup = null, popupCloseTimer = null, popupPinnedForHelp = false;
 
 function showAccounts(el) {
   clearTimeout(popupCloseTimer);
-  hidePopup();
+  hidePopup(true);
 
   const main = el.dataset.main;
   const extra = el.dataset.accounts.trim();
@@ -894,7 +894,8 @@ function showAccounts(el) {
   popup.style.top = top + "px";
 }
 
-function hidePopup() {
+function hidePopup(force = false) {
+  if (popupPinnedForHelp && !force) return;
   clearTimeout(popupCloseTimer);
   if (popup) {
     popup.remove();
@@ -1298,10 +1299,12 @@ historyPopup.addEventListener("mouseleave", scheduleHistoryClose);
 window.addEventListener("resize", () => closeHistory(true));
 window.addEventListener("scroll", () => {
   if (!historyAnchor || !["vp", "intel"].includes(historyAnchor.dataset.kind) || !historyPopup.classList.contains("visible")) return;
-  positionHistoryPopup(historyAnchor, false);
   if (historyAutoScrolling) return;
-  clearTimeout(historyScrollCloseTimer);
-  historyScrollCloseTimer = setTimeout(() => closeHistory(true), 180);
+  closeHistory(true);
+}, { passive: true });
+window.addEventListener("touchmove", () => {
+  if (!helpTour.hidden && historyPinned) return;
+  if (historyAnchor && ["vp", "intel"].includes(historyAnchor.dataset.kind)) closeHistory(true);
 }, { passive: true });
 
 const statisticsButton = document.getElementById("statisticsButton");
@@ -1447,7 +1450,11 @@ const helpTourSteps = [
     title: "Jméno hráče",
     text: "Klepnutím nebo přejetím myší nad jménem hráče zobrazíte jeho další herní účty, pokud jsou evidovány.",
     selector: '.account-name[data-accounts]:not([data-accounts=""])',
-    prepare(anchor) { showAccounts(anchor); return popup || anchor; }
+    prepare(anchor) {
+      popupPinnedForHelp = true;
+      showAccounts(anchor);
+      return popup || anchor;
+    }
   },
   {
     title: "QR kód",
@@ -1523,7 +1530,8 @@ function blockHelpTourScroll(event) {
 function clearHelpExamples() {
   closeHistory(true);
   closeOperations();
-  hidePopup();
+  popupPinnedForHelp = false;
+  hidePopup(true);
 }
 
 function positionHelpTour(target) {
