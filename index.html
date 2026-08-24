@@ -676,7 +676,10 @@ function parseCSVRow(row) {
 
   for (let i = 0; i < row.length; i++) {
     const char = row[i];
-    if (char === '"') inQuotes = !inQuotes;
+    if (char === '"' && inQuotes && row[i + 1] === '"') {
+      current += '"';
+      i++;
+    } else if (char === '"') inQuotes = !inQuotes;
     else if (char === "," && !inQuotes) {
       result.push(current);
       current = "";
@@ -684,6 +687,27 @@ function parseCSVRow(row) {
   }
   result.push(current);
   return result;
+}
+
+function normalizePlayerName(value) {
+  const name = String(value || "").trim();
+  if (/^´´petrs´´$/i.test(name)) return '"Petrs"';
+  return name;
+}
+
+function normalizePlayerAccounts(value) {
+  return String(value || "").trim().split(", ")
+    .map(normalizePlayerName)
+    .filter(Boolean)
+    .join(", ");
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
 }
 
 
@@ -756,7 +780,7 @@ loadData("playersCsv", url)
   const players = rows.slice(1, 51).map(row => {
     const c = parseCSVRow(row);
     return {
-      name: clean(c[idx("name")]),
+      name: normalizePlayerName(c[idx("name")]),
       tag: clean(c[idx("tag")]),
       level: clean(c[idx("level")]),
       role: clean(c[idx("role")]),
@@ -765,7 +789,7 @@ loadData("playersCsv", url)
       qr: clean(c[idx("qr")]),
       holiday: clean(c[idx("holiday")]),
       session: clean(c[idx("session")]),
-      accounts: clean(c[idx("accounts")])
+      accounts: normalizePlayerAccounts(c[idx("accounts")])
     };
   }).filter(p => p.name !== "");
 
@@ -782,8 +806,8 @@ loadData("playersCsv", url)
       <div class="level ${isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
       <div>
         <div class="name account-name"
-     data-main="${p.name}"
-     data-accounts="${p.accounts}" style="color:${roleColor(p.role)}">${p.name}</div>
+     data-main="${escapeHtml(p.name)}"
+     data-accounts="${escapeHtml(p.accounts)}" style="color:${roleColor(p.role)}">${escapeHtml(p.name)}</div>
         <div class="role">
           <span class="session-icon ${isTrue(p.session) ? "active" : ""}"></span>
           ${p.role}
@@ -795,8 +819,8 @@ loadData("playersCsv", url)
 </a>
       ` : `<div class="qr-empty"></div>`}
       <div class="stats">
-        <div class="stat-history" tabindex="0" role="button" data-kind="vp" data-tag="${p.tag}" data-player="${p.name}"><img class="icon" src="${medalIcon}">${p.medals}</div>
-        <div class="stat-history" tabindex="0" role="button" data-kind="intel" data-tag="${p.tag}" data-player="${p.name}"><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
+        <div class="stat-history" tabindex="0" role="button" data-kind="vp" data-tag="${p.tag}" data-player="${escapeHtml(p.name)}"><img class="icon" src="${medalIcon}">${p.medals}</div>
+        <div class="stat-history" tabindex="0" role="button" data-kind="intel" data-tag="${p.tag}" data-player="${escapeHtml(p.name)}"><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
       </div>
     `;
     team.appendChild(el);
@@ -848,7 +872,7 @@ function showAccounts(el) {
 
   popup = document.createElement("div");
   popup.className = "account-popup";
-  popup.innerHTML = list.join("<br>");
+  popup.innerHTML = list.map(escapeHtml).join("<br>");
 
   popup.addEventListener("mouseenter", () => clearTimeout(popupCloseTimer));
   popup.addEventListener("mouseleave", schedulePopupClose);

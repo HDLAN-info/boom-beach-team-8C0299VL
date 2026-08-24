@@ -64,9 +64,30 @@ function trimTeamIntelHistory(text) {
   return [rows[0], ...populatedRows.slice(-30)].map(toCsvRow).join("\n");
 }
 
+function normalizePlayerName(value) {
+  const name = String(value ?? "").trim();
+  return /^´´petrs´´$/i.test(name) ? '"Petrs"' : name;
+}
+
 function trimPlayers(text) {
-  const rows = text.trim().split(/\r?\n/);
-  return [rows[0], ...rows.slice(1, 51)].join("\n");
+  const rows = text.trim().split(/\r?\n/).map(parseCsvRow);
+  const header = rows[0];
+  const normalizedHeader = header.map(value => String(value).trim().toLowerCase());
+  const nameIndex = normalizedHeader.indexOf("name");
+  const accountsIndex = normalizedHeader.indexOf("accounts");
+  const players = rows.slice(1, 51).map(columns => {
+    const row = [...columns];
+    if (nameIndex >= 0) row[nameIndex] = normalizePlayerName(row[nameIndex]);
+    if (accountsIndex >= 0) {
+      row[accountsIndex] = String(row[accountsIndex] ?? "")
+        .split(", ")
+        .map(normalizePlayerName)
+        .filter(Boolean)
+        .join(", ");
+    }
+    return row;
+  });
+  return [header, ...players].map(toCsvRow).join("\n");
 }
 
 const transforms = {
