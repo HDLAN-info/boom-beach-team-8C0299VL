@@ -904,7 +904,8 @@ const historyPopup = document.getElementById("historyPopup");
 const historyTitle = document.getElementById("historyTitle");
 const historyContent = document.getElementById("historyContent");
 const historyCache = {};
-let historyChart = null, historyCloseTimer = null, historyPinned = false;
+let historyChart = null, historyCloseTimer = null, historyScrollCloseTimer = null, historyPinned = false;
+let historyAnchor = null, historyAutoScrolling = false;
 const weekendBackgroundPlugin = {
   id: "weekendBackground",
   beforeDraw(chart, args, options) {
@@ -1006,20 +1007,23 @@ async function loadHistory(kind) {
   return historyCache[kind];
 }
 
-function positionHistoryPopup(anchor) {
+function positionHistoryPopup(anchor, ensureVisible = true) {
   const rect = anchor.getBoundingClientRect(), width = historyPopup.getBoundingClientRect().width, height = historyPopup.getBoundingClientRect().height;
   if (anchor.dataset.kind === "vp" || anchor.dataset.kind === "intel") {
     const player = anchor.closest(".member") || anchor;
     let playerRect = player.getBoundingClientRect();
     const gap = 18;
     const popupTop = playerRect.top - height - gap;
-    if (popupTop < 24) {
+    if (ensureVisible && popupTop < 24) {
+      historyAutoScrolling = true;
       window.scrollBy(0, popupTop - 24);
       playerRect = player.getBoundingClientRect();
+      requestAnimationFrame(() => requestAnimationFrame(() => { historyAutoScrolling = false; }));
     }
     const centeredLeft = playerRect.left + playerRect.width / 2 - width / 2;
     historyPopup.style.left = `${Math.max(24, Math.min(centeredLeft, window.innerWidth - width - 24))}px`;
-    historyPopup.style.top = `${Math.max(24, playerRect.top - height - gap)}px`;
+    const top = playerRect.top - height - gap;
+    historyPopup.style.top = `${ensureVisible ? Math.max(24, top) : top}px`;
     return;
   }
   let left = rect.right + 18;
@@ -1029,7 +1033,7 @@ function positionHistoryPopup(anchor) {
 }
 
 async function showHistory(anchor, pin = false) {
-  clearTimeout(historyCloseTimer); historyPinned = pin;
+  clearTimeout(historyCloseTimer); clearTimeout(historyScrollCloseTimer); historyPinned = pin; historyAnchor = anchor;
   const kind = anchor.dataset.kind;
   historyPopup.querySelector(".history-change")?.remove();
   historyPopup.classList.toggle("team-wide", kind === "team_intel");
@@ -1259,7 +1263,7 @@ async function showHistory(anchor, pin = false) {
   } catch (error) { wrap.innerHTML = '<div class="history-message">Historii se nepodařilo načíst. Zkuste to prosím znovu.</div>'; console.error(error); }
 }
 
-function closeHistory(force = false) { if (historyPinned && !force) return; historyPopup.classList.remove("visible"); historyPinned = false; }
+function closeHistory(force = false) { if (historyPinned && !force) return; historyPopup.classList.remove("visible"); historyPinned = false; historyAnchor = null; clearTimeout(historyScrollCloseTimer); }
 function scheduleHistoryClose() { clearTimeout(historyCloseTimer); historyCloseTimer = setTimeout(closeHistory, 250); }
 document.addEventListener("mouseover", e => { const stat = e.target.closest(".stat-history"); if (stat && !stat.contains(e.relatedTarget) && matchMedia("(hover: hover)").matches) showHistory(stat); });
 document.addEventListener("mouseout", e => { const stat = e.target.closest(".stat-history"); if (stat && !stat.contains(e.relatedTarget)) scheduleHistoryClose(); });
@@ -1268,6 +1272,13 @@ document.addEventListener("keydown", e => { const stat = e.target.closest(".stat
 historyPopup.addEventListener("mouseenter", () => clearTimeout(historyCloseTimer));
 historyPopup.addEventListener("mouseleave", scheduleHistoryClose);
 window.addEventListener("resize", () => closeHistory(true));
+window.addEventListener("scroll", () => {
+  if (!historyAnchor || !["vp", "intel"].includes(historyAnchor.dataset.kind) || !historyPopup.classList.contains("visible")) return;
+  positionHistoryPopup(historyAnchor, false);
+  if (historyAutoScrolling) return;
+  clearTimeout(historyScrollCloseTimer);
+  historyScrollCloseTimer = setTimeout(() => closeHistory(true), 180);
+}, { passive: true });
 
 const statisticsButton = document.getElementById("statisticsButton");
 const statisticsPopup = document.getElementById("statisticsPopup");
