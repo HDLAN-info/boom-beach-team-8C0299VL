@@ -1012,18 +1012,14 @@ function positionHistoryPopup(anchor) {
     const player = anchor.closest(".member") || anchor;
     let playerRect = player.getBoundingClientRect();
     const gap = 18;
-    const targetPlayerTop = Math.min(height + gap + 24, window.innerHeight - playerRect.height - 24);
-    const scrollShift = playerRect.top - targetPlayerTop;
-    if (Math.abs(scrollShift) > 1) {
-      window.scrollBy(0, scrollShift);
+    const popupTop = playerRect.top - height - gap;
+    if (popupTop < 24) {
+      window.scrollBy(0, popupTop - 24);
       playerRect = player.getBoundingClientRect();
     }
-    const above = playerRect.top - height - gap;
-    const below = playerRect.bottom + gap;
-    const top = above >= 24 ? above : Math.min(below, window.innerHeight - height - 24);
     const centeredLeft = playerRect.left + playerRect.width / 2 - width / 2;
     historyPopup.style.left = `${Math.max(24, Math.min(centeredLeft, window.innerWidth - width - 24))}px`;
-    historyPopup.style.top = `${Math.max(24, top)}px`;
+    historyPopup.style.top = `${Math.max(24, playerRect.top - height - gap)}px`;
     return;
   }
   let left = rect.right + 18;
