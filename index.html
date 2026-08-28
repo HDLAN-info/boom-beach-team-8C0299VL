@@ -237,6 +237,7 @@ html, body {
 .stat-history:hover, .stat-history:focus-visible { background: rgba(255,255,255,.35); transform: scale(1.03); outline: none; }
 .history-popup { position: fixed; width: min(1066px, calc(100vw - 48px)); height: 500px; padding: 22px 26px 26px; box-sizing: border-box; background: url("img/noise.png") repeat, #f0e2bc; border: 3px solid rgba(43,95,143,.65); border-radius: 20px; box-shadow: 0 14px 45px rgba(0,0,0,.38), inset 0 2px 0 #fff5d8; z-index: 10000; display: none; }
 .history-popup.visible { display: block; }
+.history-popup.player-wide { width: min(1173px, calc(100vw - 48px)); }
 .history-popup.team-wide {
   width: min(1640px, calc(100vw - 32px));
   height: min(950px, calc(100vh - 32px));
@@ -575,7 +576,7 @@ const url = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT
 const historyUrls = {
   intel: url + "&gid=1591390740",
   vp: url + "&gid=890280555",
-  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/export?format=csv&gid=0&range=A:H"
+  team_intel: "https://docs.google.com/spreadsheets/d/1Rid8YU8T8fBx2d-Ql6B5KtpDDhFdlG0ERfwZUspCTfs/export?format=csv&gid=0&range=A:I"
 };
 const teamInfoUrl = url + "&gid=861518513";
 const lastUpdateUrl = "https://docs.google.com/spreadsheets/d/1QwQtftNvKBuVT1hTVxgilxiUdDT_D1OEhA8ILINs0Wo/export?format=csv&gid=861518513&range=B6";
@@ -820,7 +821,7 @@ loadData("playersCsv", url)
       ` : `<div class="qr-empty"></div>`}
       <div class="stats">
         <div class="stat-history" tabindex="0" role="button" data-kind="vp" data-tag="${p.tag}" data-player="${escapeHtml(p.name)}"><img class="icon" src="${medalIcon}">${p.medals}</div>
-        <div class="stat-history" tabindex="0" role="button" data-kind="intel" data-tag="${p.tag}" data-player="${escapeHtml(p.name)}"><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
+        <div class="stat-history" tabindex="0" role="button" data-kind="intel" data-tag="${p.tag}" data-player="${escapeHtml(p.name)}" data-weekly-intels="${p.tickets}"><img class="icon intel" src="${intelIcon}">${p.tickets}</div>
       </div>
     `;
     team.appendChild(el);
@@ -930,7 +931,7 @@ const historyTitle = document.getElementById("historyTitle");
 const historyContent = document.getElementById("historyContent");
 const historyCache = {};
 let historyChart = null, historyCloseTimer = null, historyScrollCloseTimer = null, historyPinned = false;
-let historyAnchor = null, historyAutoScrolling = false;
+let historyAnchor = null, historyAutoScrolling = false, historyRequestId = 0;
 const weekendBackgroundPlugin = {
   id: "weekendBackground",
   beforeDraw(chart, args, options) {
@@ -1020,6 +1021,26 @@ function parseTeamIntelHistory(text) {
     sabotageIntel
   };
 }
+function parseWeeklyTeamIntelTotal(text) {
+  const rows = text.trim().split(/\r?\n/).slice(1).map(parseCSVRow).filter(columns => {
+    const raw = clean(columns[8]).replace(/\s/g, "");
+    return raw !== "" && Number.isFinite(Number(raw));
+  });
+  let lastSundayIndex = -1;
+  rows.forEach((columns, index) => {
+    if (clean(columns[5]).toLocaleLowerCase("cs-CZ") === "neděle") lastSundayIndex = index;
+  });
+  if (lastSundayIndex < 0) return 0;
+  return rows.slice(lastSundayIndex).reduce((sum, columns) => sum + Number(clean(columns[8]).replace(/\s/g, "")), 0);
+}
+
+const weeklyTeamIntelTotalPromise = loadData("teamIntelHistoryCsv", historyUrls.team_intel)
+  .then(parseWeeklyTeamIntelTotal)
+  .catch(error => {
+    console.warn("Weekly team intel total load failed", error);
+    return 0;
+  });
+
 async function loadHistory(kind) {
   if (!historyCache[kind]) {
     const cacheKeys = { intel: "intelHistoryCsv", vp: "vpHistoryCsv", team_intel: "teamIntelHistoryCsv" };
@@ -1058,10 +1079,12 @@ function positionHistoryPopup(anchor, ensureVisible = true) {
 }
 
 async function showHistory(anchor, pin = false) {
+  const requestId = ++historyRequestId;
   clearTimeout(historyCloseTimer); clearTimeout(historyScrollCloseTimer); historyPinned = pin; historyAnchor = anchor;
   const kind = anchor.dataset.kind;
   historyPopup.querySelector(".history-change")?.remove();
   historyPopup.classList.toggle("team-wide", kind === "team_intel");
+  historyPopup.classList.toggle("player-wide", kind === "vp" || kind === "intel");
   historyPopup.classList.add("visible"); positionHistoryPopup(anchor);
   historyTitle.hidden = kind === "team_intel";
   historyTitle.textContent = kind === "team_intel" ? "" : `${anchor.dataset.player} – ${kind === "vp" ? "VP" : "intely"} za posledních 30 dnů`;
@@ -1069,6 +1092,7 @@ async function showHistory(anchor, pin = false) {
   const wrap = historyContent.querySelector(".history-chart-wrap");
   try {
     const history = await loadHistory(kind);
+    if (requestId !== historyRequestId) return;
     if (kind === "team_intel") {
       const charts = [
         {
@@ -1202,6 +1226,18 @@ async function showHistory(anchor, pin = false) {
           : "Změna o 0 VP";
       historyPopup.appendChild(change);
     }
+    if (kind === "intel") {
+      const playerWeeklyIntels = Number(anchor.dataset.weeklyIntels);
+      const teamWeeklyIntels = await weeklyTeamIntelTotalPromise;
+      if (requestId !== historyRequestId) return;
+      const percentage = Number.isFinite(playerWeeklyIntels) && teamWeeklyIntels > 0
+        ? playerWeeklyIntels / teamWeeklyIntels * 100
+        : 0;
+      const change = document.createElement("div");
+      change.className = "history-change";
+      change.textContent = `Tento týden ${percentage.toLocaleString("cs-CZ", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} % z celku`;
+      historyPopup.appendChild(change);
+    }
     if (historyChart) {
       const chartList = Array.isArray(historyChart) ? historyChart : [historyChart];
       chartList.forEach(chart => chart.destroy());
@@ -1288,7 +1324,7 @@ async function showHistory(anchor, pin = false) {
   } catch (error) { wrap.innerHTML = '<div class="history-message">Historii se nepodařilo načíst. Zkuste to prosím znovu.</div>'; console.error(error); }
 }
 
-function closeHistory(force = false) { if (historyPinned && !force) return; historyPopup.classList.remove("visible"); historyPinned = false; historyAnchor = null; clearTimeout(historyScrollCloseTimer); }
+function closeHistory(force = false) { if (historyPinned && !force) return; historyRequestId++; historyPopup.classList.remove("visible"); historyPinned = false; historyAnchor = null; clearTimeout(historyScrollCloseTimer); }
 function scheduleHistoryClose() { clearTimeout(historyCloseTimer); historyCloseTimer = setTimeout(closeHistory, 250); }
 document.addEventListener("mouseover", e => { const stat = e.target.closest(".stat-history"); if (stat && !stat.contains(e.relatedTarget) && matchMedia("(hover: hover)").matches) showHistory(stat); });
 document.addEventListener("mouseout", e => { const stat = e.target.closest(".stat-history"); if (stat && !stat.contains(e.relatedTarget)) scheduleHistoryClose(); });
