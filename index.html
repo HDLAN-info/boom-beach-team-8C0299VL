@@ -922,8 +922,8 @@ document.addEventListener("mouseout", e => {
   if (el && !el.contains(e.relatedTarget)) schedulePopupClose();
 });
 
-window.addEventListener("scroll", hidePopup);
-window.addEventListener("touchmove", hidePopup);
+window.addEventListener("scroll", () => hidePopup());
+window.addEventListener("touchmove", () => hidePopup());
 
 
 const historyPopup = document.getElementById("historyPopup");
@@ -1513,7 +1513,7 @@ const helpTourSteps = [
   },
   {
     title: "Intely hráče",
-    text: "Klepnutím nebo přejetím myší nad hodnotou intelů zobrazíte jejich vývoj za posledních 30 dnů. Svislý sobotní pokles na nulu znázorňuje pravidelný týdenní reset. Klepnutím na bod zobrazíte v malém okénku příslušný den a přesný počet intelů.",
+    text: "Klepnutím nebo přejetím myší nad hodnotou intelů zobrazíte jejich vývoj za posledních 30 dnů. Údaj „Tento týden x % z celku“ vpravo nahoře vyjadřuje, jakou část všech intelů nasbíraných celým týmem od posledního nedělního resetu získal právě tento hráč. Nedělní reset v grafu znázorňuje svislý pokles na nulu. Klepnutím na bod zobrazíte v malém okénku příslušný den a přesný počet intelů.",
     selector: '[data-kind="intel"]',
     random: true,
     async prepare(anchor) { await showHistory(anchor, true); showRandomChartTooltips(); return historyPopup; }
