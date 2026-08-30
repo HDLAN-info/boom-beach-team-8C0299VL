@@ -1026,12 +1026,12 @@ function parseWeeklyTeamIntelTotal(text) {
     const raw = clean(columns[8]).replace(/\s/g, "");
     return raw !== "" && Number.isFinite(Number(raw));
   });
-  let lastSundayIndex = -1;
+  let lastMondayIndex = -1;
   rows.forEach((columns, index) => {
-    if (clean(columns[5]).toLocaleLowerCase("cs-CZ") === "neděle") lastSundayIndex = index;
+    if (clean(columns[5]).toLocaleLowerCase("cs-CZ") === "pondělí") lastMondayIndex = index;
   });
-  if (lastSundayIndex < 0) return 0;
-  return rows.slice(lastSundayIndex).reduce((sum, columns) => sum + Number(clean(columns[8]).replace(/\s/g, "")), 0);
+  if (lastMondayIndex < 0) return 0;
+  return rows.slice(lastMondayIndex).reduce((sum, columns) => sum + Number(clean(columns[8]).replace(/\s/g, "")), 0);
 }
 
 const weeklyTeamIntelTotalPromise = loadData("teamIntelHistoryCsv", historyUrls.team_intel)
