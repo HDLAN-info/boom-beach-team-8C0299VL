@@ -85,6 +85,16 @@ html, body {
   margin-left: 14px;
 }
 
+.level.contact-leadership {
+  background:
+    url("img/noise.png") repeat,
+    #f1c84b;
+  border-color: #9b7410;
+  box-shadow:
+    inset 0 6px 0 #ffe994,
+    0 3px 0 rgba(0,0,0,0.10);
+}
+
 .level.holiday {
   background:
     url("img/noise.png") repeat,
@@ -463,7 +473,7 @@ html, body {
 .help-tour-text { font-size: 27px; font-weight: 600; line-height: 1.28; }
 .help-tour-text p { margin: 0; }
 .help-tour-text a { color: #0879bd; font-weight: 900; text-decoration: underline; }
-.help-level-legend { display: flex; gap: 28px; margin-top: 18px; }
+.help-level-legend { display: flex; flex-wrap: wrap; gap: 18px 28px; margin-top: 18px; }
 .help-level-item { display: flex; align-items: center; gap: 10px; }
 .help-level-dot {
   display: inline-flex;
@@ -481,6 +491,7 @@ html, body {
   text-shadow: 1px 1px 2px #000;
 }
 .help-level-dot.absent { border-color: #298a51; background: #66d891; }
+.help-level-dot.contact-leadership { border-color: #9b7410; background: #f1c84b; }
 .help-tour-actions { display: flex; justify-content: space-between; gap: 14px; margin-top: 22px; }
 .help-tour-button {
   min-width: 150px;
@@ -789,6 +800,7 @@ loadData("playersCsv", url)
       tickets: clean(c[idx("intels")]),
       qr: clean(c[idx("qr")]),
       holiday: clean(c[idx("holiday")]),
+      contactLeadership: clean(c[idx("kontaktovat vedení")]),
       session: clean(c[idx("session")]),
       accounts: normalizePlayerAccounts(c[idx("accounts")])
     };
@@ -804,7 +816,7 @@ loadData("playersCsv", url)
     const hasQR = p.qr !== "";
 
     el.innerHTML = `
-      <div class="level ${isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
+      <div class="level ${isTrue(p.contactLeadership) ? "contact-leadership" : isTrue(p.holiday) ? "holiday" : ""}">${p.level}</div>
       <div>
         <div class="name account-name"
      data-main="${escapeHtml(p.name)}"
@@ -1474,10 +1486,11 @@ const helpTourSteps = [
   },
   {
     title: "Level hráče",
-    text: `Modrý kruh označuje aktivního hráče. Zelený kruh znamená, že hráč předem oznámil svou dočasnou neúčast.
+    text: `Modrý kruh označuje aktivního hráče. Zelený kruh znamená, že hráč předem oznámil svou dočasnou neúčast. Pokud je Level hráče žlutý, je třeba, aby příslušný hráč hned, jak je to možné, kontaktoval vedení v chatu nebo na Seasonu <a href="https://boombeach.cz/session" target="_blank" rel="noopener">ZDE</a>.
       <div class="help-level-legend">
         <span class="help-level-item"><span class="help-level-dot">87</span> Aktivní hráč</span>
         <span class="help-level-item"><span class="help-level-dot absent">87</span> Oznámená neúčast</span>
+        <span class="help-level-item"><span class="help-level-dot contact-leadership">87</span> Kontaktovat vedení</span>
       </div>`,
     selector: ".level",
     random: true
